@@ -1,41 +1,57 @@
 "use client"
 
-import { useCallback, useRef, useEffect } from "react"
+import { useCallback, useRef, useEffect, useState } from "react"
 import { Document } from "react-pdf"
+import { pdfjs } from "react-pdf"
 import { PdfPage } from "./pdf-page"
 import { PdfControls } from "./pdf-controls"
-import { usePdfDocument } from "./use-pdf-document"
 import { Loader2 } from "lucide-react"
 
+import "react-pdf/dist/Page/AnnotationLayer.css"
+import "react-pdf/dist/Page/TextLayer.css"
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+
 interface PdfViewerProps {
+  url: string
   onTextExtracted?: (text: string) => void
 }
 
-export function PdfViewer({ onTextExtracted }: PdfViewerProps) {
-  const {
-    url,
-    numPages,
-    currentPage,
-    scale,
-    onDocumentLoadSuccess,
-    setCurrentPage,
-    zoomIn,
-    zoomOut,
-  } = usePdfDocument()
-
+export function PdfViewer({ url, onTextExtracted }: PdfViewerProps) {
+  const [numPages, setNumPages] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [scale, setScale] = useState(1.2)
   const containerRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
 
+  const zoomIn = useCallback(() => {
+    setScale((s) => Math.min(3, s + 0.2))
+  }, [])
+
+  const zoomOut = useCallback(() => {
+    setScale((s) => Math.max(0.5, s - 0.2))
+  }, [])
+
+  const goToPage = useCallback(
+    (page: number) => {
+      const clamped = Math.max(1, Math.min(page, numPages))
+      setCurrentPage(clamped)
+      const el = containerRef.current?.querySelector(
+        `[data-page-number="${clamped}"]`
+      )
+      el?.scrollIntoView({ behavior: "smooth", block: "start" })
+    },
+    [numPages]
+  )
+
   const handleLoadSuccess = useCallback(
     async (pdf: { numPages: number }) => {
-      onDocumentLoadSuccess(pdf)
+      setNumPages(pdf.numPages)
 
       if (!onTextExtracted) return
 
       const pages: string[] = []
-      const pdfDoc = await (
-        await import("react-pdf")
-      ).pdfjs.getDocument(url!).promise
+      const pdfDoc = await pdfjs.getDocument(url).promise
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdfDoc.getPage(i)
         const content = await page.getTextContent()
@@ -46,7 +62,7 @@ export function PdfViewer({ onTextExtracted }: PdfViewerProps) {
       }
       onTextExtracted(pages.join("\n\n--- Page Break ---\n\n"))
     },
-    [onDocumentLoadSuccess, onTextExtracted, url]
+    [onTextExtracted, url]
   )
 
   useEffect(() => {
@@ -74,15 +90,7 @@ export function PdfViewer({ onTextExtracted }: PdfViewerProps) {
     pages.forEach((page) => observerRef.current?.observe(page))
 
     return () => observerRef.current?.disconnect()
-  }, [numPages, setCurrentPage])
-
-  if (!url) {
-    return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
-        No PDF loaded
-      </div>
-    )
-  }
+  }, [numPages])
 
   return (
     <div className="flex h-full flex-col">
@@ -91,7 +99,7 @@ export function PdfViewer({ onTextExtracted }: PdfViewerProps) {
           currentPage={currentPage}
           numPages={numPages}
           scale={scale}
-          onPageChange={setCurrentPage}
+          onPageChange={goToPage}
           onZoomIn={zoomIn}
           onZoomOut={zoomOut}
         />

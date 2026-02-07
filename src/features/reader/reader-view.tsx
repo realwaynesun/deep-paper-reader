@@ -1,10 +1,9 @@
 "use client"
 
-import dynamic from "next/dynamic"
-import { useState, useCallback, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useCallback, useMemo } from "react"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { PdfViewer } from "@/features/pdf-viewer/pdf-viewer"
 import { SelectionToolbar } from "@/features/selection/selection-toolbar"
 import { useTextSelection } from "@/features/selection/use-text-selection"
 import { TranslatePanel } from "@/features/translate/translate-panel"
@@ -14,29 +13,22 @@ import { useAsk } from "@/features/ask/use-ask"
 import { StructurePanel } from "@/features/structure/structure-panel"
 import { useStructure } from "@/features/structure/use-structure"
 
-const PdfViewer = dynamic(
-  () =>
-    import("@/features/pdf-viewer/pdf-viewer").then((m) => ({
-      default: m.PdfViewer,
-    })),
-  { ssr: false }
-)
+interface ReaderViewProps {
+  file: File
+  onBack: () => void
+}
 
-export default function ReaderPage() {
-  const router = useRouter()
+export function ReaderView({ file, onBack }: ReaderViewProps) {
   const [fullText, setFullText] = useState<string | null>(null)
   const [translateOpen, setTranslateOpen] = useState(false)
   const [askRect, setAskRect] = useState<DOMRect | null>(null)
+
+  const pdfUrl = useMemo(() => URL.createObjectURL(file), [file])
 
   const selection = useTextSelection()
   const translate = useTranslate()
   const ask = useAsk()
   const structure = useStructure()
-  const pdfNameRef = useRef(
-    typeof window !== "undefined"
-      ? sessionStorage.getItem("pdf-name")
-      : null
-  )
 
   const handleTranslate = useCallback(() => {
     setTranslateOpen(true)
@@ -46,9 +38,9 @@ export default function ReaderPage() {
 
   const handleAsk = useCallback(() => {
     setAskRect(selection.rect)
-    ask.ask(selection.text, selection.context, pdfNameRef.current ?? undefined)
+    ask.ask(selection.text, selection.context, file.name)
     selection.clear()
-  }, [selection, ask])
+  }, [selection, ask, file.name])
 
   const handleNavigate = useCallback((page: number) => {
     const el = document.querySelector(`[data-page-number="${page}"]`)
@@ -62,11 +54,11 @@ export default function ReaderPage() {
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={() => router.push("/")}
+          onClick={onBack}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-sm font-medium">Deep Paper Reader</h1>
+        <h1 className="truncate text-sm font-medium">{file.name}</h1>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
@@ -82,7 +74,7 @@ export default function ReaderPage() {
         </div>
 
         <div className="relative flex-1 overflow-hidden">
-          <PdfViewer onTextExtracted={setFullText} />
+          <PdfViewer url={pdfUrl} onTextExtracted={setFullText} />
 
           <SelectionToolbar
             rect={selection.rect}

@@ -1,13 +1,10 @@
 "use client"
 
 import { Page } from "react-pdf"
-import "react-pdf/dist/Page/AnnotationLayer.css"
-import "react-pdf/dist/Page/TextLayer.css"
 
 interface PdfPageProps {
   pageNumber: number
   scale: number
-  onPageVisible?: (pageNumber: number) => void
 }
 
 export function PdfPage({ pageNumber, scale }: PdfPageProps) {
