@@ -25,8 +25,8 @@ export function TranslatePanel({
 }: TranslatePanelProps) {
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-[400px] overflow-y-auto sm:w-[480px]">
-        <SheetHeader>
+      <SheetContent className="w-[400px] overflow-y-auto px-6 sm:max-w-[480px] sm:w-[480px]">
+        <SheetHeader className="px-0">
           <SheetTitle className="flex items-center gap-2">
             Translation
             {isStreaming && (
@@ -35,7 +35,7 @@ export function TranslatePanel({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
+        <div className="space-y-6">
           <div>
             <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Original
