@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useCallback, useRef } from "react"
+import { useSettings } from "@/features/settings/settings-context"
+import { aiHeaders } from "@/features/settings/ai-headers"
 
 interface AskState {
   word: string
@@ -17,6 +19,7 @@ export function useAsk() {
     isOpen: false,
   })
   const abortRef = useRef<AbortController | null>(null)
+  const { settings } = useSettings()
 
   const ask = useCallback(
     async (word: string, context: string, paperTitle?: string) => {
@@ -34,7 +37,7 @@ export function useAsk() {
       try {
         const res = await fetch("/api/ask", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...aiHeaders(settings) },
           body: JSON.stringify({ word, context, paperTitle }),
           signal: controller.signal,
         })
@@ -64,7 +67,7 @@ export function useAsk() {
         setState((prev) => ({ ...prev, isStreaming: false }))
       }
     },
-    []
+    [settings]
   )
 
   const close = useCallback(() => {

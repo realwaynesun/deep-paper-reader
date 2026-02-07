@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useCallback, useRef } from "react"
+import { useSettings } from "@/features/settings/settings-context"
+import { aiHeaders } from "@/features/settings/ai-headers"
 
 export interface StructureNode {
   title: string
@@ -22,6 +24,7 @@ export function useStructure() {
     error: null,
   })
   const abortRef = useRef<AbortController | null>(null)
+  const { settings } = useSettings()
 
   const analyze = useCallback(async (text: string) => {
     abortRef.current?.abort()
@@ -33,7 +36,7 @@ export function useStructure() {
     try {
       const res = await fetch("/api/summarize", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...aiHeaders(settings) },
         body: JSON.stringify({ text }),
         signal: controller.signal,
       })
@@ -67,7 +70,7 @@ export function useStructure() {
         }))
       }
     }
-  }, [])
+  }, [settings])
 
   return { ...state, analyze }
 }

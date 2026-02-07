@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react"
 import { Upload, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { SettingsButton } from "@/features/settings/settings-dialog"
 import dynamic from "next/dynamic"
 
 const ReaderView = dynamic(
@@ -41,6 +42,9 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
+      <div className="absolute top-4 right-4">
+        <SettingsButton />
+      </div>
       <div className="text-center">
         <h1 className="text-4xl font-bold tracking-tight">
           Deep Paper Reader
@@ -82,8 +86,8 @@ export default function Home() {
       </div>
 
       <p className="max-w-md text-center text-xs text-muted-foreground">
-        Your PDF stays in the browser. Only selected text is sent to OpenAI for
-        translation and analysis.
+        Your PDF stays in the browser. Only selected text is sent to your AI
+        provider for translation and analysis.
       </p>
     </div>
   )

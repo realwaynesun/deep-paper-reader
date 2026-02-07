@@ -1,5 +1,5 @@
 import { streamText } from "ai"
-import { openai } from "@/lib/openai"
+import { getModelFromRequest } from "@/lib/route-utils"
 import { TRANSLATE_SYSTEM } from "@/lib/prompts"
 import { translateSchema } from "@/lib/schemas"
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const { text, context } = parsed.data
 
   const result = streamText({
-    model: openai("gpt-4o"),
+    model: getModelFromRequest(req),
     system: TRANSLATE_SYSTEM,
     prompt: context
       ? `Context from the paper:\n"${context}"\n\nTranslate this passage to Chinese:\n"${text}"`

@@ -1,5 +1,5 @@
 import { streamText } from "ai"
-import { openai } from "@/lib/openai"
+import { getModelFromRequest } from "@/lib/route-utils"
 import { SUMMARIZE_SYSTEM } from "@/lib/prompts"
 import { summarizeSchema } from "@/lib/schemas"
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const { text } = parsed.data
 
   const result = streamText({
-    model: openai("gpt-4o"),
+    model: getModelFromRequest(req),
     system: SUMMARIZE_SYSTEM,
     prompt: `Analyze the structure of this academic paper and return a JSON outline:\n\n${text.slice(0, 100000)}`,
   })

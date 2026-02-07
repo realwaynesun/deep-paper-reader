@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useCallback, useRef } from "react"
+import { useSettings } from "@/features/settings/settings-context"
+import { aiHeaders } from "@/features/settings/ai-headers"
 
 interface TranslateState {
   original: string
@@ -15,6 +17,7 @@ export function useTranslate() {
     isStreaming: false,
   })
   const abortRef = useRef<AbortController | null>(null)
+  const { settings } = useSettings()
 
   const translate = useCallback(async (text: string, context?: string) => {
     abortRef.current?.abort()
@@ -26,7 +29,7 @@ export function useTranslate() {
     try {
       const res = await fetch("/api/translate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...aiHeaders(settings) },
         body: JSON.stringify({ text, context }),
         signal: controller.signal,
       })
@@ -55,7 +58,7 @@ export function useTranslate() {
     } finally {
       setState((prev) => ({ ...prev, isStreaming: false }))
     }
-  }, [])
+  }, [settings])
 
   const cancel = useCallback(() => {
     abortRef.current?.abort()

@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo } from "react"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { SettingsButton } from "@/features/settings/settings-dialog"
 import { PdfViewer } from "@/features/pdf-viewer/pdf-viewer"
 import { SelectionToolbar } from "@/features/selection/selection-toolbar"
 import { useTextSelection } from "@/features/selection/use-text-selection"
@@ -59,6 +60,9 @@ export function ReaderView({ file, onBack }: ReaderViewProps) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="truncate text-sm font-medium">{file.name}</h1>
+        <div className="ml-auto">
+          <SettingsButton />
+        </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">

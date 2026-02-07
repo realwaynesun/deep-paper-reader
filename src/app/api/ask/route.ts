@@ -1,5 +1,5 @@
 import { streamText } from "ai"
-import { openai } from "@/lib/openai"
+import { getModelFromRequest } from "@/lib/route-utils"
 import { ASK_SYSTEM } from "@/lib/prompts"
 import { askSchema } from "@/lib/schemas"
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     .join("\n")
 
   const result = streamText({
-    model: openai("gpt-4o"),
+    model: getModelFromRequest(req),
     system: ASK_SYSTEM,
     prompt,
   })
