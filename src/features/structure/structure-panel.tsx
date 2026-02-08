@@ -66,7 +66,7 @@ export function StructurePanel({
             <p className="px-4 text-sm text-muted-foreground">
               {fullText
                 ? "Click below to analyze the paper structure"
-                : "Upload a PDF to analyze its structure"}
+                : "Upload a file to analyze its structure"}
             </p>
             {fullText && (
               <Button

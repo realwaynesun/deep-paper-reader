@@ -20,7 +20,7 @@ export function getSurroundingContext(
 
   if (!parent) return ""
 
-  const grandParent = parent.closest("[data-page-number]") ?? parent
+  const grandParent = parent.closest("[data-page-number], [data-section-id]") ?? parent
   const fullText = grandParent.textContent ?? ""
   const selectedText = selection.toString()
   const idx = fullText.indexOf(selectedText)

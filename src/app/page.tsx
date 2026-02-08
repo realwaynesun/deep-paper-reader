@@ -11,12 +11,19 @@ const ReaderView = dynamic(
   { ssr: false }
 )
 
-export default function Home() {
-  const [pdfFile, setPdfFile] = useState<File | null>(null)
+const ACCEPTED_TYPES = new Set(["application/pdf", "text/markdown", "text/x-markdown"])
 
-  const handleFile = useCallback((file: File) => {
-    if (file.type !== "application/pdf") return
-    setPdfFile(file)
+function isAcceptedFile(file: File): boolean {
+  if (ACCEPTED_TYPES.has(file.type)) return true
+  return file.name.endsWith(".md")
+}
+
+export default function Home() {
+  const [file, setFile] = useState<File | null>(null)
+
+  const handleFile = useCallback((f: File) => {
+    if (!isAcceptedFile(f)) return
+    setFile(f)
   }, [])
 
   const handleDrop = useCallback(
@@ -36,8 +43,8 @@ export default function Home() {
     [handleFile]
   )
 
-  if (pdfFile) {
-    return <ReaderView file={pdfFile} onBack={() => setPdfFile(null)} />
+  if (file) {
+    return <ReaderView file={file} onBack={() => setFile(null)} />
   }
 
   return (
@@ -64,7 +71,7 @@ export default function Home() {
           <Upload className="h-8 w-8 text-muted-foreground" />
         </div>
         <div className="text-center">
-          <p className="font-medium">Drag & drop a PDF</p>
+          <p className="font-medium">Drag & drop a PDF or Markdown file</p>
           <p className="mt-1 text-sm text-muted-foreground">
             or click below to browse
           </p>
@@ -73,12 +80,12 @@ export default function Home() {
           <Button variant="outline" asChild>
             <span>
               <FileText className="mr-2 h-4 w-4" />
-              Choose PDF
+              Choose File
             </span>
           </Button>
           <input
             type="file"
-            accept="application/pdf"
+            accept="application/pdf,.md"
             onChange={handleFileInput}
             className="hidden"
           />
@@ -86,7 +93,7 @@ export default function Home() {
       </div>
 
       <p className="max-w-md text-center text-xs text-muted-foreground">
-        Your PDF stays in the browser. Only selected text is sent to your AI
+        Your file stays in the browser. Only selected text is sent to your AI
         provider for translation and analysis.
       </p>
     </div>

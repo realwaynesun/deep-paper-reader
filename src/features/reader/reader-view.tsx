@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsButton } from "@/features/settings/settings-dialog"
 import { PdfViewer } from "@/features/pdf-viewer/pdf-viewer"
+import { MarkdownViewer } from "@/features/markdown-viewer/markdown-viewer"
 import { SelectionToolbar } from "@/features/selection/selection-toolbar"
 import { useTextSelection } from "@/features/selection/use-text-selection"
 import { TranslatePanel } from "@/features/translate/translate-panel"
@@ -24,7 +25,15 @@ export function ReaderView({ file, onBack }: ReaderViewProps) {
   const [translateOpen, setTranslateOpen] = useState(false)
   const [askRect, setAskRect] = useState<DOMRect | null>(null)
 
-  const pdfUrl = useMemo(() => URL.createObjectURL(file), [file])
+  const isMarkdown = file.name.endsWith(".md")
+  const [pdfUrl, setPdfUrl] = useState("")
+
+  useEffect(() => {
+    if (isMarkdown) return
+    const url = URL.createObjectURL(file)
+    setPdfUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file, isMarkdown])
 
   const selection = useTextSelection()
   const translate = useTranslate()
@@ -44,6 +53,7 @@ export function ReaderView({ file, onBack }: ReaderViewProps) {
   }, [selection, ask, file.name])
 
   const handleNavigate = useCallback((page: number) => {
+    if (!Number.isFinite(page) || page < 1) return
     const el = document.querySelector(`[data-page-number="${page}"]`)
     el?.scrollIntoView({ behavior: "smooth", block: "start" })
   }, [])
@@ -78,7 +88,11 @@ export function ReaderView({ file, onBack }: ReaderViewProps) {
         </div>
 
         <div className="relative flex-1 overflow-hidden">
-          <PdfViewer url={pdfUrl} onTextExtracted={setFullText} />
+          {isMarkdown ? (
+            <MarkdownViewer file={file} onTextExtracted={setFullText} />
+          ) : (
+            <PdfViewer url={pdfUrl} onTextExtracted={setFullText} />
+          )}
 
           <SelectionToolbar
             rect={selection.rect}
