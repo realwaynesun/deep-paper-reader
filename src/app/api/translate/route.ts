@@ -19,8 +19,8 @@ export async function POST(req: Request) {
     model: getModelFromRequest(req),
     system: TRANSLATE_SYSTEM,
     prompt: context
-      ? `Context from the paper:\n"${context}"\n\nTranslate this passage to Chinese:\n"${text}"`
-      : `Translate this academic passage to Chinese:\n"${text}"`,
+      ? `[CONTEXT - DO NOT TRANSLATE]\n"${context}"\n\n[TRANSLATE THIS - translate ONLY the text below, nothing more]\n"${text}"`
+      : `[TRANSLATE THIS]\n"${text}"`,
   })
 
   return result.toTextStreamResponse()
