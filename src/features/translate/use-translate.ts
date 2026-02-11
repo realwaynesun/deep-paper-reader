@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react"
 import { useSettings } from "@/features/settings/settings-context"
 import { aiHeaders } from "@/features/settings/ai-headers"
+import { getCached, setCache } from "@/lib/result-cache"
 
 interface TranslateState {
   original: string
@@ -21,6 +22,13 @@ export function useTranslate() {
 
   const translate = useCallback(async (text: string, context?: string) => {
     abortRef.current?.abort()
+
+    const cached = getCached("translate", text)
+    if (cached) {
+      setState({ original: text, translation: cached, isStreaming: false })
+      return
+    }
+
     const controller = new AbortController()
     abortRef.current = controller
 
@@ -48,6 +56,7 @@ export function useTranslate() {
         buffer += decoder.decode(value)
         setState((prev) => ({ ...prev, translation: buffer }))
       }
+      setCache("translate", text, buffer)
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
         setState((prev) => ({

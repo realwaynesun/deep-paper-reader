@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react"
 import { useSettings } from "@/features/settings/settings-context"
 import { aiHeaders } from "@/features/settings/ai-headers"
+import { getCached, setCache } from "@/lib/result-cache"
 
 interface AskState {
   word: string
@@ -24,6 +25,13 @@ export function useAsk() {
   const ask = useCallback(
     async (word: string, context: string, paperTitle?: string) => {
       abortRef.current?.abort()
+
+      const cached = getCached("ask", word)
+      if (cached) {
+        setState({ word, explanation: cached, isStreaming: false, isOpen: true })
+        return
+      }
+
       const controller = new AbortController()
       abortRef.current = controller
 
@@ -56,6 +64,7 @@ export function useAsk() {
           buffer += decoder.decode(value)
           setState((prev) => ({ ...prev, explanation: buffer }))
         }
+        setCache("ask", word, buffer)
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
           setState((prev) => ({
