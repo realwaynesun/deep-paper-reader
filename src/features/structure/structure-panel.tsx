@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, Loader2 } from "lucide-react"
+import { BookOpen, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { StructureItem } from "./structure-item"
 import type { StructureNode } from "./use-structure"
@@ -10,6 +10,8 @@ interface StructurePanelProps {
   isLoading: boolean
   error: string | null
   fullText: string | null
+  collapsed: boolean
+  onToggle: () => void
   onAnalyze: (text: string) => void
   onNavigate: (page: number) => void
 }
@@ -19,13 +21,40 @@ export function StructurePanel({
   isLoading,
   error,
   fullText,
+  collapsed,
+  onToggle,
   onAnalyze,
   onNavigate,
 }: StructurePanelProps) {
+  if (collapsed) {
+    return (
+      <div className="flex h-full flex-col items-center border-r pt-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onToggle}
+          title="Expand structure panel"
+        >
+          <PanelLeftOpen className="h-4 w-4" />
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full flex-col border-r">
-      <div className="border-b px-4 py-3">
+      <div className="flex items-center justify-between border-b px-4 py-3">
         <h2 className="text-sm font-semibold">Structure</h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={onToggle}
+          title="Collapse structure panel"
+        >
+          <PanelLeftClose className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">

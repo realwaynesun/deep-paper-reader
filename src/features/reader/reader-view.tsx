@@ -24,6 +24,7 @@ export function ReaderView({ file, onBack }: ReaderViewProps) {
   const [fullText, setFullText] = useState<string | null>(null)
   const [translateOpen, setTranslateOpen] = useState(false)
   const [askRect, setAskRect] = useState<DOMRect | null>(null)
+  const [structureCollapsed, setStructureCollapsed] = useState(false)
 
   const isMarkdown = file.name.endsWith(".md")
   const [pdfUrl, setPdfUrl] = useState("")
@@ -76,12 +77,14 @@ export function ReaderView({ file, onBack }: ReaderViewProps) {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-72 shrink-0 overflow-hidden">
+        <div className={`${structureCollapsed ? "w-12" : "w-72"} shrink-0 overflow-hidden transition-[width] duration-200`}>
           <StructurePanel
             nodes={structure.nodes}
             isLoading={structure.isLoading}
             error={structure.error}
             fullText={fullText}
+            collapsed={structureCollapsed}
+            onToggle={() => setStructureCollapsed((v) => !v)}
             onAnalyze={structure.analyze}
             onNavigate={handleNavigate}
           />
