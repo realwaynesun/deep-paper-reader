@@ -72,7 +72,10 @@ export async function saveDocument(input: {
     id, title: input.title, sourceUrl: input.sourceUrl, savedAt, category: input.category,
   }
 
-  await put(`documents/${id}.json`, JSON.stringify(doc), BLOB_OPTS)
+  await Promise.all([
+    put(`documents/${id}.json`, JSON.stringify(doc), BLOB_OPTS),
+    put(`meta/${id}.json`, JSON.stringify(meta), BLOB_OPTS),
+  ])
 
   const index = await readIndex()
   await writeIndex([meta, ...index])
@@ -87,7 +90,10 @@ export async function updateMeta(id: string, updates: Partial<DocumentMeta>): Pr
   if (i === -1) return
   const updated = [...index]
   updated[i] = { ...updated[i], ...updates, id }
-  await writeIndex(updated)
+  await Promise.all([
+    put(`meta/${id}.json`, JSON.stringify(updated[i]), BLOB_OPTS),
+    writeIndex(updated),
+  ])
 }
 
 export async function listDocuments(): Promise<DocumentMeta[]> {
