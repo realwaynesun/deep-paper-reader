@@ -1,4 +1,4 @@
-import { JSDOM } from "jsdom"
+import { parseHTML } from "linkedom"
 import { Readability } from "@mozilla/readability"
 import TurndownService from "turndown"
 
@@ -18,8 +18,8 @@ export async function extractUrlContent(
   }
 
   const html = await res.text()
-  const dom = new JSDOM(html, { url })
-  const article = new Readability(dom.window.document).parse()
+  const { document } = parseHTML(html)
+  const article = new Readability(document).parse()
 
   if (!article?.content) {
     throw new Error("Could not extract article content")
