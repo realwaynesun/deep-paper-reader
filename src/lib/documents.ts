@@ -1,4 +1,4 @@
-import { put, list, del, head } from "@vercel/blob"
+import { put, list, del } from "@vercel/blob"
 
 export interface StoredDocument {
   readonly id: string
@@ -21,39 +21,14 @@ function ensureToken() {
   }
 }
 
-async function fetchBlobContent(blobUrl: string): Promise<string | null> {
+async function fetchJson<T>(url: string): Promise<T | null> {
+  const res = await fetch(url, { cache: "no-store" })
+  if (!res.ok) return null
   try {
-    const res = await fetch(blobUrl, { cache: "no-store" })
-    if (!res.ok) return null
-    const ct = res.headers.get("content-type") ?? ""
-    if (!ct.includes("json") && !ct.includes("text")) return null
-    return res.text()
+    return res.json()
   } catch {
     return null
   }
-}
-
-async function readManifest(): Promise<DocumentMeta[]> {
-  const { blobs } = await list({ prefix: "documents/_index" })
-  if (blobs.length === 0) return []
-  const blob = blobs[0]
-  const url = blob.downloadUrl ?? blob.url
-  const text = await fetchBlobContent(url)
-  if (!text) return []
-  try {
-    return JSON.parse(text)
-  } catch {
-    return []
-  }
-}
-
-async function writeManifest(items: DocumentMeta[]) {
-  await put("documents/_index.json", JSON.stringify(items), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-  })
 }
 
 export async function saveDocument(input: {
@@ -65,41 +40,52 @@ export async function saveDocument(input: {
   const id = crypto.randomUUID()
   const savedAt = new Date().toISOString()
   const doc: StoredDocument = { id, ...input, savedAt }
-
-  await put(`documents/${id}.json`, JSON.stringify(doc), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-  })
-
   const meta: DocumentMeta = { id, title: input.title, sourceUrl: input.sourceUrl, savedAt }
-  const manifest = await readManifest()
-  await writeManifest([meta, ...manifest])
+
+  const opts = { access: "public" as const, addRandomSuffix: false, allowOverwrite: true }
+
+  await Promise.all([
+    put(`documents/${id}.json`, JSON.stringify(doc), { ...opts, contentType: "application/json" }),
+    put(`meta/${id}.json`, JSON.stringify(meta), { ...opts, contentType: "application/json" }),
+  ])
+
   return meta
 }
 
 export async function listDocuments(): Promise<DocumentMeta[]> {
   ensureToken()
-  return readManifest()
+  const allMeta: DocumentMeta[] = []
+  let cursor: string | undefined
+
+  do {
+    const result = await list({ prefix: "meta/", cursor, limit: 100 })
+    const fetches = result.blobs.map((b) => fetchJson<DocumentMeta>(b.url))
+    const items = await Promise.all(fetches)
+    for (const item of items) {
+      if (item) allMeta.push(item)
+    }
+    cursor = result.hasMore ? result.cursor : undefined
+  } while (cursor)
+
+  return allMeta.sort((a, b) => b.savedAt.localeCompare(a.savedAt))
 }
 
 export async function getDocument(id: string): Promise<StoredDocument | null> {
   ensureToken()
   const { blobs } = await list({ prefix: `documents/${id}.json` })
   if (blobs.length === 0) return null
-  const url = blobs[0].downloadUrl ?? blobs[0].url
-  const text = await fetchBlobContent(url)
-  if (!text) return null
-  return JSON.parse(text)
+  return fetchJson<StoredDocument>(blobs[0].url)
 }
 
 export async function deleteDocument(id: string): Promise<void> {
   ensureToken()
-  const { blobs } = await list({ prefix: `documents/${id}.json` })
-  if (blobs.length > 0) {
-    await del(blobs[0].url)
-  }
-  const manifest = await readManifest()
-  await writeManifest(manifest.filter((d) => d.id !== id))
+  const [docs, metas] = await Promise.all([
+    list({ prefix: `documents/${id}.json` }),
+    list({ prefix: `meta/${id}.json` }),
+  ])
+  const urls = [
+    ...docs.blobs.map((b) => b.url),
+    ...metas.blobs.map((b) => b.url),
+  ]
+  if (urls.length > 0) await del(urls)
 }
