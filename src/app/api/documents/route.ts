@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { saveByUrlSchema, saveByContentSchema } from "@/lib/document-schemas"
-import { listDocuments, saveDocument } from "@/lib/documents"
+import { listDocuments, saveDocument, savePdf } from "@/lib/documents"
 import { extractUrlContent } from "@/lib/extract-url"
 
 export async function GET() {
@@ -14,6 +14,25 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const ct = req.headers.get("content-type") ?? ""
+
+  if (ct.includes("multipart/form-data")) {
+    try {
+      const form = await req.formData()
+      const file = form.get("file") as File | null
+      if (!file) {
+        return NextResponse.json({ error: "No file" }, { status: 400 })
+      }
+      const title = (form.get("title") as string) || file.name.replace(/\.pdf$/i, "")
+      const pdfData = await file.arrayBuffer()
+      const meta = await savePdf({ title, pdfData })
+      return NextResponse.json(meta, { status: 201 })
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to save PDF"
+      return NextResponse.json({ error: message }, { status: 503 })
+    }
+  }
+
   const body = await req.json()
 
   const byContent = saveByContentSchema.safeParse(body)
@@ -41,5 +60,5 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ error: "Provide {url} or {title, content}" }, { status: 400 })
+  return NextResponse.json({ error: "Provide {url}, {title,content}, or multipart PDF" }, { status: 400 })
 }

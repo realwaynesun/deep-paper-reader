@@ -8,6 +8,8 @@ export interface DocumentMeta {
   sourceUrl: string
   savedAt: string
   category?: string
+  format?: "pdf" | "markdown"
+  pdfUrl?: string
 }
 
 export function useDocuments() {

@@ -9,7 +9,7 @@ export interface DocumentListHandle {
 }
 
 interface DocumentListProps {
-  onOpen: (doc: { id: string; title: string; content: string; sourceUrl: string }) => void
+  onOpen: (doc: { id: string; title: string; content?: string; sourceUrl?: string; format?: string; pdfUrl?: string }) => void
 }
 
 export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
@@ -44,6 +44,10 @@ export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
     const isSearching = search.length > 0 || activeCategory !== null
 
     const handleOpen = async (doc: DocumentMeta) => {
+      if (doc.format === "pdf" && doc.pdfUrl) {
+        onOpen({ id: doc.id, title: doc.title, format: "pdf", pdfUrl: doc.pdfUrl })
+        return
+      }
       setLoadingId(doc.id)
       try {
         const res = await fetch(`/api/documents/${doc.id}`)

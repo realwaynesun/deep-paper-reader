@@ -27,6 +27,8 @@ export interface DocumentMeta {
   readonly sourceUrl: string
   readonly savedAt: string
   readonly category?: Category
+  readonly format?: "pdf" | "markdown"
+  readonly pdfUrl?: string
 }
 
 function ensureToken() {
@@ -83,6 +85,35 @@ export async function saveDocument(input: {
   return meta
 }
 
+export async function savePdf(input: {
+  title: string
+  pdfData: ArrayBuffer
+  category?: Category
+}): Promise<DocumentMeta> {
+  ensureToken()
+  const id = crypto.randomUUID()
+  const savedAt = new Date().toISOString()
+
+  const pdfBlob = await put(`pdfs/${id}.pdf`, input.pdfData, {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/pdf",
+  })
+
+  const meta: DocumentMeta = {
+    id, title: input.title, sourceUrl: "", savedAt,
+    category: input.category, format: "pdf", pdfUrl: pdfBlob.url,
+  }
+
+  await put(`meta/${id}.json`, JSON.stringify(meta), BLOB_OPTS)
+
+  const index = await readIndex()
+  await writeIndex([meta, ...index])
+
+  return meta
+}
+
 export async function updateMeta(id: string, updates: Partial<DocumentMeta>): Promise<void> {
   ensureToken()
   const index = await readIndex()
@@ -110,8 +141,12 @@ export async function getDocument(id: string): Promise<StoredDocument | null> {
 
 export async function deleteDocument(id: string): Promise<void> {
   ensureToken()
-  const { blobs } = await list({ prefix: `documents/${id}.json` })
-  if (blobs.length > 0) await del(blobs.map((b) => b.url))
+  const [docs, pdfs] = await Promise.all([
+    list({ prefix: `documents/${id}.json` }),
+    list({ prefix: `pdfs/${id}.pdf` }),
+  ])
+  const urls = [...docs.blobs, ...pdfs.blobs].map((b) => b.url)
+  if (urls.length > 0) await del(urls)
 
   const index = await readIndex()
   await writeIndex(index.filter((d) => d.id !== id))

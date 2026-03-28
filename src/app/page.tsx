@@ -22,6 +22,7 @@ export interface WebContent {
 export type DocumentSource =
   | { type: "file"; file: File }
   | { type: "web"; web: WebContent }
+  | { type: "pdf"; id: string; title: string; pdfUrl: string }
 
 const ACCEPTED_TYPES = new Set(["application/pdf", "text/markdown", "text/x-markdown"])
 
@@ -58,7 +59,14 @@ export default function Home() {
       return
     }
 
+    // PDF — open immediately, upload to cloud in background
     setDoc({ type: "file", file: f })
+    const form = new FormData()
+    form.append("file", f)
+    form.append("title", f.name.replace(/\.pdf$/i, ""))
+    fetch("/api/documents", { method: "POST", body: form })
+      .then(() => docListRef.current?.refresh())
+      .catch(() => {})
   }, [])
 
   const handleDrop = useCallback(
@@ -105,23 +113,20 @@ export default function Home() {
   }, [urlInput])
 
   const handleOpenSaved = useCallback(
-    (web: { id: string; title: string; content: string; sourceUrl: string }) => {
-      setDoc({ type: "web", web })
+    (saved: { id: string; title: string; content?: string; sourceUrl?: string; format?: string; pdfUrl?: string }) => {
+      if (saved.format === "pdf" && saved.pdfUrl) {
+        setDoc({ type: "pdf", id: saved.id, title: saved.title, pdfUrl: saved.pdfUrl })
+      } else {
+        setDoc({ type: "web", web: { id: saved.id, title: saved.title, content: saved.content ?? "", sourceUrl: saved.sourceUrl } })
+      }
     },
     []
   )
 
-  const handleSavedPdfText = useCallback((title: string, text: string) => {
-    saveToCloud({ title, content: text }).then(() => docListRef.current?.refresh())
-  }, [])
 
   if (doc) {
     return (
-      <ReaderView
-        doc={doc}
-        onBack={() => setDoc(null)}
-        onPdfTextSaved={doc.type === "file" ? handleSavedPdfText : undefined}
-      />
+      <ReaderView doc={doc} onBack={() => setDoc(null)} />
     )
   }
 

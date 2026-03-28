@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsButton } from "@/features/settings/settings-dialog"
@@ -19,22 +19,29 @@ import type { DocumentSource } from "@/app/page"
 interface ReaderViewProps {
   doc: DocumentSource
   onBack: () => void
-  onPdfTextSaved?: (title: string, text: string) => void
 }
 
-export function ReaderView({ doc, onBack, onPdfTextSaved }: ReaderViewProps) {
+export function ReaderView({ doc, onBack }: ReaderViewProps) {
   const [fullText, setFullText] = useState<string | null>(null)
   const [translateOpen, setTranslateOpen] = useState(false)
   const [askRect, setAskRect] = useState<DOMRect | null>(null)
   const [structureCollapsed, setStructureCollapsed] = useState(false)
-  const pdfSavedRef = useRef(false)
 
-  const isPdf = doc.type === "file" && !doc.file.name.endsWith(".md")
-  const [pdfUrl, setPdfUrl] = useState("")
+  const isPdf =
+    doc.type === "pdf" ||
+    (doc.type === "file" && !doc.file.name.endsWith(".md"))
+
+  const [pdfUrl, setPdfUrl] = useState(doc.type === "pdf" ? doc.pdfUrl : "")
 
   const title =
-    doc.type === "file" ? doc.file.name : doc.web.title
-  const documentId = doc.type === "web" ? doc.web.id : undefined
+    doc.type === "file" ? doc.file.name :
+    doc.type === "pdf" ? doc.title :
+    doc.web.title
+
+  const documentId =
+    doc.type === "pdf" ? doc.id :
+    doc.type === "web" ? doc.web.id :
+    undefined
 
   useEffect(() => {
     if (doc.type !== "file" || doc.file.name.endsWith(".md")) return
@@ -42,13 +49,6 @@ export function ReaderView({ doc, onBack, onPdfTextSaved }: ReaderViewProps) {
     setPdfUrl(url)
     return () => URL.revokeObjectURL(url)
   }, [doc])
-
-  useEffect(() => {
-    if (!isPdf || !fullText || pdfSavedRef.current || !onPdfTextSaved) return
-    pdfSavedRef.current = true
-    const pdfTitle = doc.type === "file" ? doc.file.name.replace(/\.pdf$/i, "") : title
-    onPdfTextSaved(pdfTitle, fullText)
-  }, [isPdf, fullText, onPdfTextSaved, doc, title])
 
   const selection = useTextSelection()
   const translate = useTranslate()
@@ -74,13 +74,16 @@ export function ReaderView({ doc, onBack, onPdfTextSaved }: ReaderViewProps) {
   }, [])
 
   const renderViewer = () => {
-    if (isPdf) {
+    if (isPdf && pdfUrl) {
       return <PdfViewer url={pdfUrl} onTextExtracted={setFullText} />
     }
     if (doc.type === "file") {
       return <MarkdownViewer file={doc.file} onTextExtracted={setFullText} />
     }
-    return <MarkdownViewer content={doc.web.content} onTextExtracted={setFullText} />
+    if (doc.type === "web") {
+      return <MarkdownViewer content={doc.web.content} onTextExtracted={setFullText} />
+    }
+    return null
   }
 
   return (
