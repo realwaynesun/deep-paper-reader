@@ -1,15 +1,26 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { Upload, FileText } from "lucide-react"
+import { Upload, FileText, Globe, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsButton } from "@/features/settings/settings-dialog"
+import { DocumentList } from "@/features/documents/document-list"
 import dynamic from "next/dynamic"
 
 const ReaderView = dynamic(
   () => import("@/features/reader/reader-view").then((m) => ({ default: m.ReaderView })),
   { ssr: false }
 )
+
+export interface WebContent {
+  title: string
+  content: string
+  sourceUrl?: string
+}
+
+export type DocumentSource =
+  | { type: "file"; file: File }
+  | { type: "web"; web: WebContent }
 
 const ACCEPTED_TYPES = new Set(["application/pdf", "text/markdown", "text/x-markdown"])
 
@@ -19,11 +30,14 @@ function isAcceptedFile(file: File): boolean {
 }
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null)
+  const [doc, setDoc] = useState<DocumentSource | null>(null)
+  const [urlInput, setUrlInput] = useState("")
+  const [urlLoading, setUrlLoading] = useState(false)
+  const [urlError, setUrlError] = useState("")
 
   const handleFile = useCallback((f: File) => {
     if (!isAcceptedFile(f)) return
-    setFile(f)
+    setDoc({ type: "file", file: f })
   }, [])
 
   const handleDrop = useCallback(
@@ -43,8 +57,40 @@ export default function Home() {
     [handleFile]
   )
 
-  if (file) {
-    return <ReaderView file={file} onBack={() => setFile(null)} />
+  const handleUrlSubmit = useCallback(async () => {
+    const trimmed = urlInput.trim()
+    if (!trimmed) return
+
+    setUrlError("")
+    setUrlLoading(true)
+    try {
+      const res = await fetch("/api/fetch-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setUrlError(data.error || "Failed to fetch URL")
+        return
+      }
+      setDoc({ type: "web", web: { ...data, sourceUrl: trimmed } })
+    } catch {
+      setUrlError("Network error")
+    } finally {
+      setUrlLoading(false)
+    }
+  }, [urlInput])
+
+  const handleOpenSaved = useCallback(
+    (web: { title: string; content: string; sourceUrl: string }) => {
+      setDoc({ type: "web", web })
+    },
+    []
+  )
+
+  if (doc) {
+    return <ReaderView doc={doc} onBack={() => setDoc(null)} />
   }
 
   return (
@@ -57,15 +103,52 @@ export default function Home() {
           Deep Paper Reader
         </h1>
         <p className="mt-3 text-lg text-muted-foreground">
-          AI-powered academic paper reader with translation and structure
-          analysis
+          AI-powered reading assistant with translation and structure analysis
         </p>
+      </div>
+
+      <div className="flex w-full max-w-lg flex-col items-center gap-3 rounded-xl border border-muted-foreground/25 p-6">
+        <div className="flex w-full items-center gap-2">
+          <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <input
+            type="url"
+            placeholder="Paste a URL to read..."
+            value={urlInput}
+            onChange={(e) => {
+              setUrlInput(e.target.value)
+              setUrlError("")
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleUrlSubmit()
+            }}
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleUrlSubmit}
+            disabled={urlLoading || !urlInput.trim()}
+          >
+            {urlLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Go"}
+          </Button>
+        </div>
+        {urlError && (
+          <p className="w-full text-xs text-destructive">{urlError}</p>
+        )}
+      </div>
+
+      <DocumentList onOpen={handleOpenSaved} />
+
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="h-px w-8 bg-muted-foreground/25" />
+        or upload a file
+        <div className="h-px w-8 bg-muted-foreground/25" />
       </div>
 
       <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
-        className="flex w-full max-w-lg flex-col items-center gap-4 rounded-xl border-2 border-dashed border-muted-foreground/25 p-12 transition-colors hover:border-muted-foreground/50"
+        className="flex w-full max-w-lg flex-col items-center gap-4 rounded-xl border-2 border-dashed border-muted-foreground/25 p-10 transition-colors hover:border-muted-foreground/50"
       >
         <div className="rounded-full bg-muted p-4">
           <Upload className="h-8 w-8 text-muted-foreground" />

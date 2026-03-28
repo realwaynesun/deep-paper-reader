@@ -3,26 +3,32 @@
 import { useEffect, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 
-interface MarkdownViewerProps {
-  file: File
+type MarkdownViewerProps = {
   onTextExtracted: (text: string) => void
-}
+} & ({ file: File; content?: never } | { content: string; file?: never })
 
-export function MarkdownViewer({ file, onTextExtracted }: MarkdownViewerProps) {
-  const [content, setContent] = useState<string>("")
+export function MarkdownViewer({ file, content: rawContent, onTextExtracted }: MarkdownViewerProps) {
+  const [content, setContent] = useState<string>(rawContent ?? "")
   const [error, setError] = useState<string>("")
   const onTextExtractedRef = useRef(onTextExtracted)
   onTextExtractedRef.current = onTextExtracted
 
   useEffect(() => {
-    file
-      .text()
-      .then((text) => {
-        setContent(text)
-        onTextExtractedRef.current(text)
-      })
-      .catch(() => setError("Failed to read file"))
-  }, [file])
+    if (rawContent != null) {
+      setContent(rawContent)
+      onTextExtractedRef.current(rawContent)
+      return
+    }
+    if (file) {
+      file
+        .text()
+        .then((text) => {
+          setContent(text)
+          onTextExtractedRef.current(text)
+        })
+        .catch(() => setError("Failed to read file"))
+    }
+  }, [file, rawContent])
 
   if (error) {
     return (
