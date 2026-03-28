@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsButton } from "@/features/settings/settings-dialog"
 import { PdfViewer } from "@/features/pdf-viewer/pdf-viewer"
@@ -98,7 +98,21 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="truncate text-sm font-medium">{title}</h1>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          {doc.type === "pdf" && doc.pdfUrl && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 text-xs text-muted-foreground"
+              onClick={() => {
+                navigator.clipboard.writeText(doc.pdfUrl)
+                window.open("https://notebooklm.google.com", "_blank")
+              }}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              NotebookLM
+            </Button>
+          )}
           <SettingsButton />
         </div>
       </header>
