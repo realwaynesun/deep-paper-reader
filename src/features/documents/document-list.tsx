@@ -18,6 +18,8 @@ export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
     const [loadingId, setLoadingId] = useState<string | null>(null)
     const [search, setSearch] = useState("")
     const [activeCategory, setActiveCategory] = useState<string | null>(null)
+    const [showAll, setShowAll] = useState(false)
+    const DEFAULT_COUNT = 20
 
     useImperativeHandle(ref, () => ({ refresh }), [refresh])
 
@@ -38,6 +40,8 @@ export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
         return d.title.toLowerCase().includes(q) || d.sourceUrl.toLowerCase().includes(q)
       })
     }, [documents, search, activeCategory])
+
+    const isSearching = search.length > 0 || activeCategory !== null
 
     const handleOpen = async (doc: DocumentMeta) => {
       setLoadingId(doc.id)
@@ -96,7 +100,7 @@ export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
         )}
 
         <div className="flex flex-col gap-0.5">
-          {filtered.map((doc) => (
+          {(isSearching ? filtered : filtered.slice(0, showAll ? undefined : DEFAULT_COUNT)).map((doc) => (
             <div
               key={doc.id}
               className="group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm transition-colors hover:border-muted-foreground/25 hover:bg-muted/50"
@@ -133,6 +137,22 @@ export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
           ))}
           {filtered.length === 0 && (
             <p className="py-4 text-center text-xs text-muted-foreground">No matching documents</p>
+          )}
+          {!isSearching && !showAll && filtered.length > DEFAULT_COUNT && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="mt-1 w-full py-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Show all {filtered.length} documents
+            </button>
+          )}
+          {!isSearching && showAll && filtered.length > DEFAULT_COUNT && (
+            <button
+              onClick={() => setShowAll(false)}
+              className="mt-1 w-full py-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Show less
+            </button>
           )}
         </div>
       </div>
