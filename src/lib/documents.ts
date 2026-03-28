@@ -6,6 +6,7 @@ export const CATEGORIES = [
   "News",
   "Documentation",
   "Tutorial",
+  "30-implementations",
   "Other",
 ] as const
 
