@@ -141,11 +141,12 @@ export async function getDocument(id: string): Promise<StoredDocument | null> {
 
 export async function deleteDocument(id: string): Promise<void> {
   ensureToken()
-  const [docs, pdfs] = await Promise.all([
+  const [docs, pdfs, metas] = await Promise.all([
     list({ prefix: `documents/${id}.json` }),
     list({ prefix: `pdfs/${id}.pdf` }),
+    list({ prefix: `meta/${id}.json` }),
   ])
-  const urls = [...docs.blobs, ...pdfs.blobs].map((b) => b.url)
+  const urls = [...docs.blobs, ...pdfs.blobs, ...metas.blobs].map((b) => b.url)
   if (urls.length > 0) await del(urls)
 
   const index = await readIndex()
