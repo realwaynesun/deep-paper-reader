@@ -7,12 +7,12 @@ export interface DocumentMeta {
   title: string
   sourceUrl: string
   savedAt: string
+  category?: string
 }
 
 export function useDocuments() {
   const [documents, setDocuments] = useState<DocumentMeta[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState("")
 
   const refresh = useCallback(async () => {
     try {
@@ -22,7 +22,6 @@ export function useDocuments() {
         return
       }
       setDocuments(await res.json())
-      setError("")
     } catch {
       setDocuments([])
     } finally {
@@ -39,5 +38,5 @@ export function useDocuments() {
     setDocuments((prev) => prev.filter((d) => d.id !== id))
   }, [])
 
-  return { documents, isLoading, error, refresh, remove }
+  return { documents, isLoading, refresh, remove }
 }

@@ -1,11 +1,23 @@
 import { put, list, del } from "@vercel/blob"
 
+export const CATEGORIES = [
+  "Research",
+  "Blog",
+  "News",
+  "Documentation",
+  "Tutorial",
+  "Other",
+] as const
+
+export type Category = (typeof CATEGORIES)[number]
+
 export interface StoredDocument {
   readonly id: string
   readonly title: string
   readonly content: string
   readonly sourceUrl: string
   readonly savedAt: string
+  readonly category?: Category
 }
 
 export interface DocumentMeta {
@@ -13,6 +25,7 @@ export interface DocumentMeta {
   readonly title: string
   readonly sourceUrl: string
   readonly savedAt: string
+  readonly category?: Category
 }
 
 function ensureToken() {
@@ -31,25 +44,38 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+const BLOB_OPTS = { access: "public" as const, addRandomSuffix: false, allowOverwrite: true, contentType: "application/json" }
+
 export async function saveDocument(input: {
   title: string
   content: string
   sourceUrl: string
+  category?: Category
 }): Promise<DocumentMeta> {
   ensureToken()
   const id = crypto.randomUUID()
   const savedAt = new Date().toISOString()
   const doc: StoredDocument = { id, ...input, savedAt }
-  const meta: DocumentMeta = { id, title: input.title, sourceUrl: input.sourceUrl, savedAt }
-
-  const opts = { access: "public" as const, addRandomSuffix: false, allowOverwrite: true }
+  const meta: DocumentMeta = {
+    id, title: input.title, sourceUrl: input.sourceUrl, savedAt, category: input.category,
+  }
 
   await Promise.all([
-    put(`documents/${id}.json`, JSON.stringify(doc), { ...opts, contentType: "application/json" }),
-    put(`meta/${id}.json`, JSON.stringify(meta), { ...opts, contentType: "application/json" }),
+    put(`documents/${id}.json`, JSON.stringify(doc), BLOB_OPTS),
+    put(`meta/${id}.json`, JSON.stringify(meta), BLOB_OPTS),
   ])
 
   return meta
+}
+
+export async function updateMeta(id: string, updates: Partial<DocumentMeta>): Promise<void> {
+  ensureToken()
+  const { blobs } = await list({ prefix: `meta/${id}.json` })
+  if (blobs.length === 0) return
+  const current = await fetchJson<DocumentMeta>(blobs[0].url)
+  if (!current) return
+  const updated = { ...current, ...updates, id }
+  await put(`meta/${id}.json`, JSON.stringify(updated), BLOB_OPTS)
 }
 
 export async function listDocuments(): Promise<DocumentMeta[]> {
