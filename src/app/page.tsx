@@ -1,10 +1,10 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { Upload, FileText, Globe, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsButton } from "@/features/settings/settings-dialog"
-import { DocumentList } from "@/features/documents/document-list"
+import { DocumentList, type DocumentListHandle } from "@/features/documents/document-list"
 import dynamic from "next/dynamic"
 
 const ReaderView = dynamic(
@@ -29,14 +29,34 @@ function isAcceptedFile(file: File): boolean {
   return file.name.endsWith(".md")
 }
 
+async function saveToCloud(data: { title: string; content: string; sourceUrl?: string }) {
+  const res = await fetch("/api/documents", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) return null
+  return res.json()
+}
+
 export default function Home() {
   const [doc, setDoc] = useState<DocumentSource | null>(null)
   const [urlInput, setUrlInput] = useState("")
   const [urlLoading, setUrlLoading] = useState(false)
   const [urlError, setUrlError] = useState("")
+  const docListRef = useRef<DocumentListHandle>(null)
 
-  const handleFile = useCallback((f: File) => {
+  const handleFile = useCallback(async (f: File) => {
     if (!isAcceptedFile(f)) return
+
+    if (f.name.endsWith(".md") || f.type === "text/markdown" || f.type === "text/x-markdown") {
+      const content = await f.text()
+      const title = f.name.replace(/\.md$/, "")
+      setDoc({ type: "web", web: { title, content } })
+      saveToCloud({ title, content }).then(() => docListRef.current?.refresh())
+      return
+    }
+
     setDoc({ type: "file", file: f })
   }, [])
 
@@ -64,7 +84,7 @@ export default function Home() {
     setUrlError("")
     setUrlLoading(true)
     try {
-      const res = await fetch("/api/fetch-url", {
+      const res = await fetch("/api/documents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: trimmed }),
@@ -74,7 +94,8 @@ export default function Home() {
         setUrlError(data.error || "Failed to fetch URL")
         return
       }
-      setDoc({ type: "web", web: { ...data, sourceUrl: trimmed } })
+      setDoc({ type: "web", web: { title: data.title, content: data.content, sourceUrl: trimmed } })
+      docListRef.current?.refresh()
     } catch {
       setUrlError("Network error")
     } finally {
@@ -89,8 +110,18 @@ export default function Home() {
     []
   )
 
+  const handleSavedPdfText = useCallback((title: string, text: string) => {
+    saveToCloud({ title, content: text }).then(() => docListRef.current?.refresh())
+  }, [])
+
   if (doc) {
-    return <ReaderView doc={doc} onBack={() => setDoc(null)} />
+    return (
+      <ReaderView
+        doc={doc}
+        onBack={() => setDoc(null)}
+        onPdfTextSaved={doc.type === "file" ? handleSavedPdfText : undefined}
+      />
+    )
   }
 
   return (
@@ -137,7 +168,7 @@ export default function Home() {
         )}
       </div>
 
-      <DocumentList onOpen={handleOpenSaved} />
+      <DocumentList ref={docListRef} onOpen={handleOpenSaved} />
 
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <div className="h-px w-8 bg-muted-foreground/25" />

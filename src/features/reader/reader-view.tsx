@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
-import { ArrowLeft, Bookmark, Check } from "lucide-react"
+import { useState, useCallback, useEffect, useRef } from "react"
+import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsButton } from "@/features/settings/settings-dialog"
 import { PdfViewer } from "@/features/pdf-viewer/pdf-viewer"
@@ -19,17 +19,17 @@ import type { DocumentSource } from "@/app/page"
 interface ReaderViewProps {
   doc: DocumentSource
   onBack: () => void
+  onPdfTextSaved?: (title: string, text: string) => void
 }
 
-export function ReaderView({ doc, onBack }: ReaderViewProps) {
+export function ReaderView({ doc, onBack, onPdfTextSaved }: ReaderViewProps) {
   const [fullText, setFullText] = useState<string | null>(null)
   const [translateOpen, setTranslateOpen] = useState(false)
   const [askRect, setAskRect] = useState<DOMRect | null>(null)
   const [structureCollapsed, setStructureCollapsed] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const pdfSavedRef = useRef(false)
 
   const isPdf = doc.type === "file" && !doc.file.name.endsWith(".md")
-  const canSave = doc.type === "web" && !!doc.web.sourceUrl
   const [pdfUrl, setPdfUrl] = useState("")
 
   const title =
@@ -41,6 +41,13 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
     setPdfUrl(url)
     return () => URL.revokeObjectURL(url)
   }, [doc])
+
+  useEffect(() => {
+    if (!isPdf || !fullText || pdfSavedRef.current || !onPdfTextSaved) return
+    pdfSavedRef.current = true
+    const pdfTitle = doc.type === "file" ? doc.file.name.replace(/\.pdf$/i, "") : title
+    onPdfTextSaved(pdfTitle, fullText)
+  }, [isPdf, fullText, onPdfTextSaved, doc, title])
 
   const selection = useTextSelection()
   const translate = useTranslate()
@@ -87,26 +94,7 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="truncate text-sm font-medium">{title}</h1>
-        <div className="ml-auto flex items-center gap-1">
-          {canSave && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              disabled={saved}
-              onClick={async () => {
-                if (doc.type !== "web" || !doc.web.sourceUrl) return
-                const res = await fetch("/api/documents", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ url: doc.web.sourceUrl }),
-                })
-                if (res.ok) setSaved(true)
-              }}
-            >
-              {saved ? <Check className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
-            </Button>
-          )}
+        <div className="ml-auto">
           <SettingsButton />
         </div>
       </header>

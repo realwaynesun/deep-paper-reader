@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     try {
       const { title, content, sourceUrl } = byContent.data
       const meta = await saveDocument({ title, content, sourceUrl: sourceUrl ?? "" })
-      return NextResponse.json(meta, { status: 201 })
+      return NextResponse.json({ ...meta, content }, { status: 201 })
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to save"
       return NextResponse.json({ error: message }, { status: 503 })
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     try {
       const { title, content } = await extractUrlContent(byUrl.data.url)
       const meta = await saveDocument({ title, content, sourceUrl: byUrl.data.url })
-      return NextResponse.json(meta, { status: 201 })
+      return NextResponse.json({ ...meta, content }, { status: 201 })
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to save"
       const status = message.includes("not configured") ? 503 : 500
