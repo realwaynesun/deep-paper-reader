@@ -95,7 +95,7 @@ export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
           </div>
         )}
 
-        <div className="flex max-h-80 flex-col gap-0.5 overflow-y-auto">
+        <div className="flex flex-col gap-0.5">
           {filtered.map((doc) => (
             <div
               key={doc.id}

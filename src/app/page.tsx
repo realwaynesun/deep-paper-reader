@@ -125,25 +125,25 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
+    <div
+      className="flex min-h-screen flex-col items-center p-8"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={handleDrop}
+    >
       <div className="absolute top-4 right-4">
         <SettingsButton />
       </div>
-      <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight">
-          Deep Paper Reader
-        </h1>
-        <p className="mt-3 text-lg text-muted-foreground">
-          AI-powered reading assistant with translation and structure analysis
-        </p>
+
+      <div className="mt-8 mb-6 text-center">
+        <h1 className="text-3xl font-bold tracking-tight">Deep Paper Reader</h1>
       </div>
 
-      <div className="flex w-full max-w-lg flex-col items-center gap-3 rounded-xl border border-muted-foreground/25 p-6">
-        <div className="flex w-full items-center gap-2">
+      <div className="flex w-full max-w-lg items-center gap-2">
+        <div className="flex flex-1 items-center gap-2 rounded-lg border border-muted-foreground/25 px-3 py-2">
           <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
             type="url"
-            placeholder="Paste a URL to read..."
+            placeholder="Paste a URL..."
             value={urlInput}
             onChange={(e) => {
               setUrlInput(e.target.value)
@@ -155,7 +155,7 @@ export default function Home() {
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
           />
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={handleUrlSubmit}
             disabled={urlLoading || !urlInput.trim()}
@@ -163,38 +163,11 @@ export default function Home() {
             {urlLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Go"}
           </Button>
         </div>
-        {urlError && (
-          <p className="w-full text-xs text-destructive">{urlError}</p>
-        )}
-      </div>
-
-      <DocumentList ref={docListRef} onOpen={handleOpenSaved} />
-
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <div className="h-px w-8 bg-muted-foreground/25" />
-        or upload a file
-        <div className="h-px w-8 bg-muted-foreground/25" />
-      </div>
-
-      <div
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
-        className="flex w-full max-w-lg flex-col items-center gap-4 rounded-xl border-2 border-dashed border-muted-foreground/25 p-10 transition-colors hover:border-muted-foreground/50"
-      >
-        <div className="rounded-full bg-muted p-4">
-          <Upload className="h-8 w-8 text-muted-foreground" />
-        </div>
-        <div className="text-center">
-          <p className="font-medium">Drag & drop a PDF or Markdown file</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            or click below to browse
-          </p>
-        </div>
         <label>
-          <Button variant="outline" asChild>
+          <Button variant="outline" size="sm" asChild>
             <span>
-              <FileText className="mr-2 h-4 w-4" />
-              Choose File
+              <Upload className="mr-1.5 h-3.5 w-3.5" />
+              File
             </span>
           </Button>
           <input
@@ -205,11 +178,13 @@ export default function Home() {
           />
         </label>
       </div>
+      {urlError && (
+        <p className="mt-1 w-full max-w-lg text-xs text-destructive">{urlError}</p>
+      )}
 
-      <p className="max-w-md text-center text-xs text-muted-foreground">
-        Your file stays in the browser. Only selected text is sent to your AI
-        provider for translation and analysis.
-      </p>
+      <div className="mt-6 w-full max-w-lg flex-1">
+        <DocumentList ref={docListRef} onOpen={handleOpenSaved} />
+      </div>
     </div>
   )
 }
