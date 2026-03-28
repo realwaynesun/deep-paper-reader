@@ -9,7 +9,7 @@ export interface DocumentListHandle {
 }
 
 interface DocumentListProps {
-  onOpen: (doc: { title: string; content: string; sourceUrl: string }) => void
+  onOpen: (doc: { id: string; title: string; content: string; sourceUrl: string }) => void
 }
 
 export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
@@ -49,7 +49,7 @@ export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
         const res = await fetch(`/api/documents/${doc.id}`)
         if (!res.ok) return
         const full = await res.json()
-        onOpen({ title: full.title, content: full.content, sourceUrl: full.sourceUrl })
+        onOpen({ id: full.id, title: full.title, content: full.content, sourceUrl: full.sourceUrl })
       } finally {
         setLoadingId(null)
       }

@@ -13,6 +13,7 @@ const ReaderView = dynamic(
 )
 
 export interface WebContent {
+  id?: string
   title: string
   content: string
   sourceUrl?: string
@@ -104,7 +105,7 @@ export default function Home() {
   }, [urlInput])
 
   const handleOpenSaved = useCallback(
-    (web: { title: string; content: string; sourceUrl: string }) => {
+    (web: { id: string; title: string; content: string; sourceUrl: string }) => {
       setDoc({ type: "web", web })
     },
     []

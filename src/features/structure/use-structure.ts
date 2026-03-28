@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { useSettings } from "@/features/settings/settings-context"
 import { aiHeaders } from "@/features/settings/ai-headers"
 
@@ -17,7 +17,7 @@ interface StructureState {
   error: string | null
 }
 
-export function useStructure() {
+export function useStructure(documentId?: string) {
   const [state, setState] = useState<StructureState>({
     nodes: [],
     isLoading: false,
@@ -25,6 +25,20 @@ export function useStructure() {
   })
   const abortRef = useRef<AbortController | null>(null)
   const { settings } = useSettings()
+  const loadedRef = useRef(false)
+
+  useEffect(() => {
+    if (!documentId || loadedRef.current) return
+    loadedRef.current = true
+    fetch(`/api/documents/${documentId}/structure`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setState({ nodes: data, isLoading: false, error: null })
+        }
+      })
+      .catch(() => {})
+  }, [documentId])
 
   const analyze = useCallback(async (text: string) => {
     abortRef.current?.abort()
@@ -61,6 +75,14 @@ export function useStructure() {
         .trim()
       const nodes = JSON.parse(cleaned) as StructureNode[]
       setState({ nodes, isLoading: false, error: null })
+
+      if (documentId) {
+        fetch(`/api/documents/${documentId}/structure`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(nodes),
+        }).catch(() => {})
+      }
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
         setState((prev) => ({
@@ -70,7 +92,7 @@ export function useStructure() {
         }))
       }
     }
-  }, [settings])
+  }, [settings, documentId])
 
   return { ...state, analyze }
 }

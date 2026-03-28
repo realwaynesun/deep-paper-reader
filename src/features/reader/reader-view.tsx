@@ -34,6 +34,7 @@ export function ReaderView({ doc, onBack, onPdfTextSaved }: ReaderViewProps) {
 
   const title =
     doc.type === "file" ? doc.file.name : doc.web.title
+  const documentId = doc.type === "web" ? doc.web.id : undefined
 
   useEffect(() => {
     if (doc.type !== "file" || doc.file.name.endsWith(".md")) return
@@ -52,7 +53,7 @@ export function ReaderView({ doc, onBack, onPdfTextSaved }: ReaderViewProps) {
   const selection = useTextSelection()
   const translate = useTranslate()
   const ask = useAsk()
-  const structure = useStructure()
+  const structure = useStructure(documentId)
 
   const handleTranslate = useCallback(() => {
     setTranslateOpen(true)
