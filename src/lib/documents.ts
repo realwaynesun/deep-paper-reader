@@ -21,19 +21,24 @@ function ensureToken() {
   }
 }
 
-async function fetchBlob(url: string) {
-  const token = process.env.BLOB_READ_WRITE_TOKEN!
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) return null
-  return res.text()
+async function fetchBlobContent(blobUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(blobUrl, { cache: "no-store" })
+    if (!res.ok) return null
+    const ct = res.headers.get("content-type") ?? ""
+    if (!ct.includes("json") && !ct.includes("text")) return null
+    return res.text()
+  } catch {
+    return null
+  }
 }
 
 async function readManifest(): Promise<DocumentMeta[]> {
   const { blobs } = await list({ prefix: "documents/_index" })
   if (blobs.length === 0) return []
-  const text = await fetchBlob(blobs[0].downloadUrl)
+  const blob = blobs[0]
+  const url = blob.downloadUrl ?? blob.url
+  const text = await fetchBlobContent(url)
   if (!text) return []
   try {
     return JSON.parse(text)
@@ -83,7 +88,8 @@ export async function getDocument(id: string): Promise<StoredDocument | null> {
   ensureToken()
   const { blobs } = await list({ prefix: `documents/${id}.json` })
   if (blobs.length === 0) return null
-  const text = await fetchBlob(blobs[0].downloadUrl)
+  const url = blobs[0].downloadUrl ?? blobs[0].url
+  const text = await fetchBlobContent(url)
   if (!text) return null
   return JSON.parse(text)
 }
