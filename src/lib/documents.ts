@@ -46,6 +46,7 @@ async function writeManifest(items: DocumentMeta[]) {
   await put("documents/_index.json", JSON.stringify(items), {
     access: "public",
     addRandomSuffix: false,
+    allowOverwrite: true,
     contentType: "application/json",
   })
 }
@@ -63,6 +64,7 @@ export async function saveDocument(input: {
   await put(`documents/${id}.json`, JSON.stringify(doc), {
     access: "public",
     addRandomSuffix: false,
+    allowOverwrite: true,
     contentType: "application/json",
   })
 
