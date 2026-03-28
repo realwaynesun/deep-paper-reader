@@ -31,11 +31,14 @@ export function useTextSelection() {
   }, [])
 
   useEffect(() => {
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
       if (dismissRef.current) {
         dismissRef.current = false
         return
       }
+
+      const target = e.target as HTMLElement
+      if (target.closest("[data-no-selection-toolbar]")) return
 
       setTimeout(() => {
         const selection = window.getSelection()
