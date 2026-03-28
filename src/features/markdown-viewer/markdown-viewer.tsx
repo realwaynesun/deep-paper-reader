@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
+import remarkMath from "remark-math"
+import rehypeKatex from "rehype-katex"
+import "katex/dist/katex.min.css"
 
 type MarkdownViewerProps = {
   onTextExtracted: (text: string) => void
@@ -54,6 +57,8 @@ export function MarkdownViewer({ file, content: rawContent, onTextExtracted }: M
       >
         <ReactMarkdown
           skipHtml
+          remarkPlugins={[remarkMath]}
+          rehypePlugins={[rehypeKatex]}
           components={{
             h1: createHeading("h1"),
             h2: createHeading("h2"),
