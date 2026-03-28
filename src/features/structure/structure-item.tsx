@@ -21,33 +21,32 @@ export function StructureItem({
 
   return (
     <div>
-      <button
-        className="group flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+      <div
+        className="rounded-md px-2 py-1.5 text-sm hover:bg-accent"
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
-        onClick={() => {
-          if (hasChildren) {
-            setExpanded(!expanded)
-          } else {
-            setShowFull(!showFull)
-          }
-          if (node.page > 1) onNavigate(node.page)
-        }}
       >
-        {hasChildren && (
-          <ChevronRight
-            className={`mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${
-              expanded ? "rotate-90" : ""
-            }`}
-          />
-        )}
-        {!hasChildren && <div className="w-3.5 shrink-0" />}
-        <div className="min-w-0 flex-1">
+        <div
+          className="flex cursor-pointer items-start gap-2"
+          onClick={() => {
+            if (hasChildren) setExpanded(!expanded)
+            else setShowFull(!showFull)
+            if (node.page > 1) onNavigate(node.page)
+          }}
+        >
+          {hasChildren && (
+            <ChevronRight
+              className={`mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${
+                expanded ? "rotate-90" : ""
+              }`}
+            />
+          )}
+          {!hasChildren && <div className="w-3.5 shrink-0" />}
           <span className="font-medium">{node.title}</span>
-          <p className={`mt-0.5 text-xs text-muted-foreground ${showFull ? "" : "line-clamp-2"}`}>
-            {node.summary}
-          </p>
         </div>
-      </button>
+        <p className={`mt-0.5 select-text pl-[22px] text-xs text-muted-foreground ${showFull ? "" : "line-clamp-2"}`}>
+          {node.summary}
+        </p>
+      </div>
 
       {expanded && hasChildren && (
         <div>
