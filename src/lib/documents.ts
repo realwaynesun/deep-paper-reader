@@ -1,4 +1,4 @@
-import { put, list, del } from "@vercel/blob"
+import { put, list, del, head } from "@vercel/blob"
 
 export interface StoredDocument {
   readonly id: string
@@ -21,11 +21,25 @@ function ensureToken() {
   }
 }
 
+async function fetchBlob(url: string) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN!
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) return null
+  return res.text()
+}
+
 async function readManifest(): Promise<DocumentMeta[]> {
   const { blobs } = await list({ prefix: "documents/_index" })
   if (blobs.length === 0) return []
-  const res = await fetch(blobs[0].url)
-  return res.json()
+  const text = await fetchBlob(blobs[0].downloadUrl)
+  if (!text) return []
+  try {
+    return JSON.parse(text)
+  } catch {
+    return []
+  }
 }
 
 async function writeManifest(items: DocumentMeta[]) {
@@ -67,8 +81,9 @@ export async function getDocument(id: string): Promise<StoredDocument | null> {
   ensureToken()
   const { blobs } = await list({ prefix: `documents/${id}.json` })
   if (blobs.length === 0) return null
-  const res = await fetch(blobs[0].url)
-  return res.json()
+  const text = await fetchBlob(blobs[0].downloadUrl)
+  if (!text) return null
+  return JSON.parse(text)
 }
 
 export async function deleteDocument(id: string): Promise<void> {
