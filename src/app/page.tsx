@@ -1,7 +1,8 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import { Upload, FileText, Globe, Loader2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Upload, Globe, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsButton } from "@/features/settings/settings-dialog"
 import { DocumentList, type DocumentListHandle } from "@/features/documents/document-list"
@@ -31,18 +32,9 @@ function isAcceptedFile(file: File): boolean {
   return file.name.endsWith(".md")
 }
 
-async function saveToCloud(data: { title: string; content: string; sourceUrl?: string }) {
-  const res = await fetch("/api/documents", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  })
-  if (!res.ok) return null
-  return res.json()
-}
-
 export default function Home() {
-  const [doc, setDoc] = useState<DocumentSource | null>(null)
+  const router = useRouter()
+  const [localDoc, setLocalDoc] = useState<DocumentSource | null>(null)
   const [urlInput, setUrlInput] = useState("")
   const [urlLoading, setUrlLoading] = useState(false)
   const [urlError, setUrlError] = useState("")
@@ -54,20 +46,35 @@ export default function Home() {
     if (f.name.endsWith(".md") || f.type === "text/markdown" || f.type === "text/x-markdown") {
       const content = await f.text()
       const title = f.name.replace(/\.md$/, "")
-      setDoc({ type: "web", web: { title, content } })
-      saveToCloud({ title, content }).then(() => docListRef.current?.refresh())
+      const res = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        router.push(`/read/${data.id}`)
+      } else {
+        setLocalDoc({ type: "web", web: { title, content } })
+      }
       return
     }
 
-    // PDF — open immediately, upload to cloud in background
-    setDoc({ type: "file", file: f })
+    // PDF — upload to cloud, then navigate
+    setLocalDoc({ type: "file", file: f })
     const form = new FormData()
     form.append("file", f)
     form.append("title", f.name.replace(/\.pdf$/i, ""))
     fetch("/api/documents", { method: "POST", body: form })
-      .then(() => docListRef.current?.refresh())
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json()
+          router.push(`/read/${data.id}`)
+          setLocalDoc(null)
+        }
+      })
       .catch(() => {})
-  }, [])
+  }, [router])
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -103,31 +110,17 @@ export default function Home() {
         setUrlError(data.error || "Failed to fetch URL")
         return
       }
-      setDoc({ type: "web", web: { title: data.title, content: data.content, sourceUrl: trimmed } })
-      docListRef.current?.refresh()
+      router.push(`/read/${data.id}`)
     } catch {
       setUrlError("Network error")
     } finally {
       setUrlLoading(false)
     }
-  }, [urlInput])
+  }, [urlInput, router])
 
-  const handleOpenSaved = useCallback(
-    (saved: { id: string; title: string; content?: string; sourceUrl?: string; format?: string; pdfUrl?: string }) => {
-      if (saved.format === "pdf" && saved.pdfUrl) {
-        setDoc({ type: "pdf", id: saved.id, title: saved.title, pdfUrl: saved.pdfUrl })
-      } else {
-        setDoc({ type: "web", web: { id: saved.id, title: saved.title, content: saved.content ?? "", sourceUrl: saved.sourceUrl } })
-      }
-    },
-    []
-  )
-
-
-  if (doc) {
-    return (
-      <ReaderView doc={doc} onBack={() => setDoc(null)} />
-    )
+  // Local file being viewed before cloud save completes
+  if (localDoc) {
+    return <ReaderView doc={localDoc} onBack={() => setLocalDoc(null)} />
   }
 
   return (
@@ -189,7 +182,7 @@ export default function Home() {
       )}
 
       <div className="mt-6 w-full max-w-lg flex-1">
-        <DocumentList ref={docListRef} onOpen={handleOpenSaved} />
+        <DocumentList ref={docListRef} />
       </div>
     </div>
   )

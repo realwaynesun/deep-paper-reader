@@ -1,27 +1,36 @@
 "use client"
 
 import { forwardRef, useImperativeHandle, useMemo, useState } from "react"
-import { Loader2, Search, Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Loader2, Search, Trash2, BookOpen } from "lucide-react"
 import { useDocuments, type DocumentMeta } from "./use-documents"
+import { getAllProgress } from "@/lib/reading-progress"
 
 export interface DocumentListHandle {
   refresh: () => void
 }
 
-interface DocumentListProps {
-  onOpen: (doc: { id: string; title: string; content?: string; sourceUrl?: string; format?: string; pdfUrl?: string }) => void
-}
-
-export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
-  function DocumentList({ onOpen }, ref) {
+export const DocumentList = forwardRef<DocumentListHandle>(
+  function DocumentList(_, ref) {
+    const router = useRouter()
     const { documents, isLoading, refresh, remove } = useDocuments()
-    const [loadingId, setLoadingId] = useState<string | null>(null)
     const [search, setSearch] = useState("")
     const [activeCategory, setActiveCategory] = useState<string | null>(null)
     const [showAll, setShowAll] = useState(false)
     const DEFAULT_COUNT = 20
 
     useImperativeHandle(ref, () => ({ refresh }), [refresh])
+
+    const recentReads = useMemo(() => {
+      const progress = getAllProgress()
+      return progress
+        .slice(0, 5)
+        .map((p) => {
+          const doc = documents.find((d) => d.id === p.documentId)
+          return doc ? { ...doc, progress: p } : null
+        })
+        .filter(Boolean) as (DocumentMeta & { progress: { page?: number; scrollRatio?: number; lastReadAt: string } })[]
+    }, [documents])
 
     const categories = useMemo(() => {
       const counts = new Map<string, number>()
@@ -43,27 +52,32 @@ export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
 
     const isSearching = search.length > 0 || activeCategory !== null
 
-    const handleOpen = async (doc: DocumentMeta) => {
-      if (doc.format === "pdf" && doc.pdfUrl) {
-        onOpen({ id: doc.id, title: doc.title, format: "pdf", pdfUrl: doc.pdfUrl })
-        return
-      }
-      setLoadingId(doc.id)
-      try {
-        const res = await fetch(`/api/documents/${doc.id}`)
-        if (!res.ok) return
-        const full = await res.json()
-        onOpen({ id: full.id, title: full.title, content: full.content, sourceUrl: full.sourceUrl })
-      } finally {
-        setLoadingId(null)
-      }
-    }
-
     if (isLoading) return null
     if (documents.length === 0) return null
 
     return (
       <div className="w-full max-w-lg">
+        {recentReads.length > 0 && !isSearching && (
+          <div className="mb-4">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Continue Reading</p>
+            <div className="flex flex-col gap-1">
+              {recentReads.map((doc) => (
+                <button
+                  key={doc.id}
+                  onClick={() => router.push(`/read/${doc.id}`)}
+                  className="flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-left text-sm transition-colors hover:border-muted-foreground/25 hover:bg-muted/50"
+                >
+                  <BookOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">{doc.title}</span>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                    {doc.progress.page ? `p.${doc.progress.page}` : doc.progress.scrollRatio ? `${Math.round(doc.progress.scrollRatio * 100)}%` : ""}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mb-3 flex items-center gap-2 rounded-lg border border-muted-foreground/25 px-3 py-1.5">
           <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <input
@@ -110,15 +124,10 @@ export const DocumentList = forwardRef<DocumentListHandle, DocumentListProps>(
               className="group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm transition-colors hover:border-muted-foreground/25 hover:bg-muted/50"
             >
               <button
-                onClick={() => handleOpen(doc)}
+                onClick={() => router.push(`/read/${doc.id}`)}
                 className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                disabled={loadingId === doc.id}
               >
-                {loadingId === doc.id ? (
-                  <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
-                ) : (
-                  <span className="truncate">{doc.title}</span>
-                )}
+                <span className="truncate">{doc.title}</span>
               </button>
               {doc.category && (
                 <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">

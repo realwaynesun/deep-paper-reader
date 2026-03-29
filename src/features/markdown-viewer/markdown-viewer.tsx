@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
@@ -8,12 +8,16 @@ import "katex/dist/katex.min.css"
 
 type MarkdownViewerProps = {
   onTextExtracted: (text: string) => void
+  onScrollChange?: (ratio: number) => void
+  initialScrollRatio?: number
 } & ({ file: File; content?: never } | { content: string; file?: never })
 
-export function MarkdownViewer({ file, content: rawContent, onTextExtracted }: MarkdownViewerProps) {
+export function MarkdownViewer({ file, content: rawContent, onTextExtracted, onScrollChange, initialScrollRatio }: MarkdownViewerProps) {
   const [content, setContent] = useState<string>(rawContent ?? "")
   const [error, setError] = useState<string>("")
   const onTextExtractedRef = useRef(onTextExtracted)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const restoredRef = useRef(false)
   onTextExtractedRef.current = onTextExtracted
 
   useEffect(() => {
@@ -33,6 +37,23 @@ export function MarkdownViewer({ file, content: rawContent, onTextExtracted }: M
     }
   }, [file, rawContent])
 
+  // Restore scroll position
+  useEffect(() => {
+    if (!content || restoredRef.current || !initialScrollRatio || !scrollRef.current) return
+    restoredRef.current = true
+    const el = scrollRef.current
+    requestAnimationFrame(() => {
+      el.scrollTop = initialScrollRatio * (el.scrollHeight - el.clientHeight)
+    })
+  }, [content, initialScrollRatio])
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el || !onScrollChange) return
+    const ratio = el.scrollTop / Math.max(1, el.scrollHeight - el.clientHeight)
+    onScrollChange(ratio)
+  }, [onScrollChange])
+
   if (error) {
     return (
       <div className="flex h-full items-center justify-center text-destructive">
@@ -50,7 +71,7 @@ export function MarkdownViewer({ file, content: rawContent, onTextExtracted }: M
   }
 
   return (
-    <div className="h-full overflow-y-auto p-8">
+    <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto p-8">
       <article
         className="prose prose-neutral mx-auto max-w-3xl dark:prose-invert"
         data-section-id="markdown-root"

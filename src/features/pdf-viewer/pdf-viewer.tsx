@@ -15,9 +15,11 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 interface PdfViewerProps {
   url: string
   onTextExtracted?: (text: string) => void
+  initialPage?: number
+  onPageChange?: (page: number, totalPages: number) => void
 }
 
-export function PdfViewer({ url, onTextExtracted }: PdfViewerProps) {
+export function PdfViewer({ url, onTextExtracted, initialPage, onPageChange }: PdfViewerProps) {
   const [numPages, setNumPages] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [scale, setScale] = useState(1.2)
@@ -61,8 +63,15 @@ export function PdfViewer({ url, onTextExtracted }: PdfViewerProps) {
         pages.push(text)
       }
       onTextExtracted(pages.join("\n\n--- Page Break ---\n\n"))
+
+      if (initialPage && initialPage > 1) {
+        setTimeout(() => {
+          const el = containerRef.current?.querySelector(`[data-page-number="${initialPage}"]`)
+          el?.scrollIntoView({ block: "start" })
+        }, 300)
+      }
     },
-    [onTextExtracted, url]
+    [onTextExtracted, url, initialPage]
   )
 
   useEffect(() => {
@@ -80,7 +89,10 @@ export function PdfViewer({ url, onTextExtracted }: PdfViewerProps) {
           const pageNum = Number(
             (visible[0].target as HTMLElement).dataset.pageNumber
           )
-          if (pageNum) setCurrentPage(pageNum)
+          if (pageNum) {
+            setCurrentPage(pageNum)
+            onPageChange?.(pageNum, numPages)
+          }
         }
       },
       { root: container, threshold: 0.5 }

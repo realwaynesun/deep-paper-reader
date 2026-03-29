@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsButton } from "@/features/settings/settings-dialog"
@@ -14,6 +15,7 @@ import { AskPopover } from "@/features/ask/ask-popover"
 import { useAsk } from "@/features/ask/use-ask"
 import { StructurePanel } from "@/features/structure/structure-panel"
 import { useStructure } from "@/features/structure/use-structure"
+import { getProgress, setProgress } from "@/lib/reading-progress"
 import type { DocumentSource } from "@/app/page"
 
 interface ReaderViewProps {
@@ -22,10 +24,12 @@ interface ReaderViewProps {
 }
 
 export function ReaderView({ doc, onBack }: ReaderViewProps) {
+  const router = useRouter()
   const [fullText, setFullText] = useState<string | null>(null)
   const [translateOpen, setTranslateOpen] = useState(false)
   const [askRect, setAskRect] = useState<DOMRect | null>(null)
   const [structureCollapsed, setStructureCollapsed] = useState(false)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   const isPdf =
     doc.type === "pdf" ||
@@ -43,12 +47,33 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
     doc.type === "web" ? doc.web.id :
     undefined
 
+  const savedProgress = documentId ? getProgress(documentId) : null
+
   useEffect(() => {
     if (doc.type !== "file" || doc.file.name.endsWith(".md")) return
     const url = URL.createObjectURL(doc.file)
     setPdfUrl(url)
     return () => URL.revokeObjectURL(url)
   }, [doc])
+
+  // Mark as read
+  useEffect(() => {
+    if (documentId) setProgress(documentId, {})
+  }, [documentId])
+
+  const throttledSave = useCallback((data: Record<string, unknown>) => {
+    if (!documentId) return
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => setProgress(documentId, data), 2000)
+  }, [documentId])
+
+  const handlePageChange = useCallback((page: number, totalPages: number) => {
+    throttledSave({ page, totalPages })
+  }, [throttledSave])
+
+  const handleScrollChange = useCallback((ratio: number) => {
+    throttledSave({ scrollRatio: ratio })
+  }, [throttledSave])
 
   const selection = useTextSelection()
   const translate = useTranslate()
@@ -75,13 +100,20 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
 
   const renderViewer = () => {
     if (isPdf && pdfUrl) {
-      return <PdfViewer url={pdfUrl} onTextExtracted={setFullText} />
+      return (
+        <PdfViewer
+          url={pdfUrl}
+          onTextExtracted={setFullText}
+          initialPage={savedProgress?.page}
+          onPageChange={handlePageChange}
+        />
+      )
     }
     if (doc.type === "file") {
-      return <MarkdownViewer file={doc.file} onTextExtracted={setFullText} />
+      return <MarkdownViewer file={doc.file} onTextExtracted={setFullText} onScrollChange={handleScrollChange} initialScrollRatio={savedProgress?.scrollRatio} />
     }
     if (doc.type === "web") {
-      return <MarkdownViewer content={doc.web.content} onTextExtracted={setFullText} />
+      return <MarkdownViewer content={doc.web.content} onTextExtracted={setFullText} onScrollChange={handleScrollChange} initialScrollRatio={savedProgress?.scrollRatio} />
     }
     return null
   }
