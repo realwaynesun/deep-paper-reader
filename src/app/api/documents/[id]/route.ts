@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server"
-import { put } from "@vercel/blob"
+import { put, list } from "@vercel/blob"
 import { getDocument, deleteDocument } from "@/lib/documents"
+
+async function getDocumentOrMeta(id: string) {
+  const doc = await getDocument(id)
+  if (doc) return doc
+  const { blobs } = await list({ prefix: `meta/${id}.json` })
+  if (blobs.length === 0) return null
+  const res = await fetch(blobs[0].url, { cache: "no-store" })
+  if (!res.ok) return null
+  return res.json()
+}
 
 interface Params {
   params: Promise<{ id: string }>
@@ -9,7 +19,7 @@ interface Params {
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params
   try {
-    const doc = await getDocument(id)
+    const doc = await getDocumentOrMeta(id)
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 })
     }
