@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from "react"
 import { useSettings } from "@/features/settings/settings-context"
 import { aiHeaders } from "@/features/settings/ai-headers"
 import { getCached, setCache } from "@/lib/result-cache"
+import { addVocab } from "@/lib/vocabulary"
 
 interface AskState {
   word: string
@@ -22,13 +23,17 @@ export function useAsk() {
   const abortRef = useRef<AbortController | null>(null)
   const { settings } = useSettings()
 
+  const onVocabSavedRef = useRef<(() => void) | null>(null)
+
   const ask = useCallback(
-    async (word: string, context: string, paperTitle?: string) => {
+    async (word: string, context: string, paperTitle?: string, documentId?: string) => {
       abortRef.current?.abort()
 
       const cached = getCached("ask", word)
       if (cached) {
         setState({ word, explanation: cached, isStreaming: false, isOpen: true })
+        addVocab({ word, explanation: cached, context, documentTitle: paperTitle, documentId })
+        onVocabSavedRef.current?.()
         return
       }
 
@@ -65,6 +70,8 @@ export function useAsk() {
           setState((prev) => ({ ...prev, explanation: buffer }))
         }
         setCache("ask", word, buffer)
+        addVocab({ word, explanation: buffer, context, documentTitle: paperTitle, documentId })
+        onVocabSavedRef.current?.()
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
           setState((prev) => ({
@@ -84,5 +91,9 @@ export function useAsk() {
     setState((prev) => ({ ...prev, isOpen: false, isStreaming: false }))
   }, [])
 
-  return { ...state, ask, close }
+  const setOnVocabSaved = useCallback((fn: () => void) => {
+    onVocabSavedRef.current = fn
+  }, [])
+
+  return { ...state, ask, close, setOnVocabSaved }
 }

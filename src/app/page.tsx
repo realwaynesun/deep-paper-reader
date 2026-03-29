@@ -129,7 +129,10 @@ export default function Home() {
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
     >
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => router.push("/vocabulary")}>
+          Vocabulary
+        </Button>
         <SettingsButton />
       </div>
 

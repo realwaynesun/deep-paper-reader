@@ -1,11 +1,13 @@
 "use client"
 
-import { BookOpen, Loader2, PanelLeftClose, PanelLeftOpen, Bookmark, Highlighter, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { BookOpen, Loader2, PanelLeftClose, PanelLeftOpen, Bookmark, Highlighter, BookA, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { StructureItem } from "./structure-item"
 import type { StructureNode } from "./use-structure"
 import type { Bookmark as BookmarkType } from "@/lib/bookmarks"
 import type { Highlight } from "@/lib/highlights"
+import type { VocabEntry } from "@/lib/vocabulary"
 
 interface StructurePanelProps {
   nodes: StructureNode[]
@@ -20,6 +22,8 @@ interface StructurePanelProps {
   onNavigate: (page: number) => void
   onRemoveBookmark: (id: string) => void
   onRemoveHighlight: (id: string) => void
+  vocabulary: VocabEntry[]
+  onRemoveVocab: (id: string) => void
 }
 
 export function StructurePanel({
@@ -35,6 +39,8 @@ export function StructurePanel({
   onNavigate,
   onRemoveBookmark,
   onRemoveHighlight,
+  vocabulary,
+  onRemoveVocab,
 }: StructurePanelProps) {
   if (collapsed) {
     return (
@@ -129,6 +135,11 @@ export function StructurePanel({
         <HighlightsSection
           highlights={highlights}
           onRemove={onRemoveHighlight}
+        />
+
+        <VocabularySection
+          vocabulary={vocabulary}
+          onRemove={onRemoveVocab}
         />
       </div>
     </div>
@@ -225,6 +236,60 @@ function HighlightsSection({
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function VocabularySection({
+  vocabulary,
+  onRemove,
+}: {
+  vocabulary: VocabEntry[]
+  onRemove: (id: string) => void
+}) {
+  if (vocabulary.length === 0) return null
+
+  return (
+    <div className="mt-4 border-t pt-3">
+      <div className="flex items-center gap-1.5 px-2 pb-2">
+        <BookA className="h-3.5 w-3.5 text-blue-500" />
+        <span className="text-xs font-semibold text-muted-foreground">
+          Vocabulary ({vocabulary.length})
+        </span>
+      </div>
+      <div className="space-y-0.5">
+        {vocabulary.map((v) => (
+          <VocabItem key={v.id} entry={v} onRemove={onRemove} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function VocabItem({ entry, onRemove }: { entry: VocabEntry; onRemove: (id: string) => void }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className="group rounded-md px-2 py-1.5 hover:bg-accent">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="min-w-0 flex-1 text-left text-sm font-medium"
+        >
+          {entry.word}
+        </button>
+        <button
+          onClick={() => onRemove(entry.id)}
+          className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+        >
+          <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+        </button>
+      </div>
+      {expanded && (
+        <p className="mt-1 select-text border-l-2 border-blue-500/50 pl-2 text-xs text-muted-foreground">
+          {entry.explanation}
+        </p>
+      )}
     </div>
   )
 }

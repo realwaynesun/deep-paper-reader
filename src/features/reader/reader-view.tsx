@@ -20,6 +20,7 @@ import { useDocumentSearch } from "@/features/search/use-document-search"
 import { getProgress, setProgress } from "@/lib/reading-progress"
 import { getBookmarks, addBookmark, removeBookmark, type Bookmark as BookmarkData } from "@/lib/bookmarks"
 import { getHighlights, addHighlight, removeHighlight, type Highlight } from "@/lib/highlights"
+import { getVocabForDocument, removeVocab, type VocabEntry } from "@/lib/vocabulary"
 import type { DocumentSource } from "@/app/page"
 
 interface ReaderViewProps {
@@ -52,6 +53,7 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
   const [translateOpen, setTranslateOpen] = useState(false)
   const [bookmarks, setBookmarks] = useState<BookmarkData[]>([])
   const [highlights, setHighlights] = useState<Highlight[]>([])
+  const [vocabulary, setVocabulary] = useState<VocabEntry[]>([])
   const [askRect, setAskRect] = useState<DOMRect | null>(null)
   const [pdfUrl, setPdfUrl] = useState(doc.type === "pdf" ? doc.pdfUrl : "")
   const [structureCollapsed, setStructureCollapsed] = useState(savedProgress?.structureCollapsed ?? false)
@@ -75,6 +77,7 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
     if (!documentId) return
     setBookmarks(getBookmarks(documentId))
     setHighlights(getHighlights(documentId))
+    setVocabulary(getVocabForDocument(documentId))
   }, [documentId])
 
   // Reading time tracker (30s interval, pauses when tab hidden)
@@ -137,11 +140,17 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
     selection.clear()
   }, [selection, translate])
 
+  useEffect(() => {
+    ask.setOnVocabSaved(() => {
+      if (documentId) setVocabulary(getVocabForDocument(documentId))
+    })
+  }, [ask, documentId])
+
   const handleAsk = useCallback(() => {
     setAskRect(selection.rect)
-    ask.ask(selection.text, selection.context, title)
+    ask.ask(selection.text, selection.context, title, documentId)
     selection.clear()
-  }, [selection, ask, title])
+  }, [selection, ask, title, documentId])
 
   const handleHighlight = useCallback(() => {
     if (!documentId || !selection.text) return
@@ -180,6 +189,11 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
     if (!documentId) return
     removeHighlight(documentId, id)
     setHighlights(getHighlights(documentId))
+  }, [documentId])
+
+  const handleRemoveVocab = useCallback((id: string) => {
+    removeVocab(id)
+    if (documentId) setVocabulary(getVocabForDocument(documentId))
   }, [documentId])
 
   const handleNavigate = useCallback((page: number) => {
@@ -271,6 +285,8 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
             onNavigate={handleNavigate}
             onRemoveBookmark={handleRemoveBookmark}
             onRemoveHighlight={handleRemoveHighlight}
+            vocabulary={vocabulary}
+            onRemoveVocab={handleRemoveVocab}
           />
         </div>
 
