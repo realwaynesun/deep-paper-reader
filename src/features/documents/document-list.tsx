@@ -4,7 +4,7 @@ import { forwardRef, useImperativeHandle, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Search, Trash2, BookOpen } from "lucide-react"
 import { useDocuments, type DocumentMeta } from "./use-documents"
-import { getAllProgress } from "@/lib/reading-progress"
+import { getAllProgress, formatReadingTime } from "@/lib/reading-progress"
 
 export interface DocumentListHandle {
   refresh: () => void
@@ -29,7 +29,7 @@ export const DocumentList = forwardRef<DocumentListHandle>(
           const doc = documents.find((d) => d.id === p.documentId)
           return doc ? { ...doc, progress: p } : null
         })
-        .filter(Boolean) as (DocumentMeta & { progress: { page?: number; scrollRatio?: number; lastReadAt: string } })[]
+        .filter(Boolean) as (DocumentMeta & { progress: { page?: number; scrollRatio?: number; totalReadingTime?: number; lastReadAt: string } })[]
     }, [documents])
 
     const categories = useMemo(() => {
@@ -69,6 +69,11 @@ export const DocumentList = forwardRef<DocumentListHandle>(
                 >
                   <BookOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1 truncate">{doc.title}</span>
+                  {doc.progress.totalReadingTime && doc.progress.totalReadingTime >= 60 ? (
+                    <span className="shrink-0 text-[10px] text-muted-foreground">
+                      {formatReadingTime(doc.progress.totalReadingTime)}
+                    </span>
+                  ) : null}
                   <span className="shrink-0 text-[10px] text-muted-foreground">
                     {doc.progress.page ? `p.${doc.progress.page}` : doc.progress.scrollRatio ? `${Math.round(doc.progress.scrollRatio * 100)}%` : ""}
                   </span>

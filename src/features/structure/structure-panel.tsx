@@ -1,9 +1,11 @@
 "use client"
 
-import { BookOpen, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { BookOpen, Loader2, PanelLeftClose, PanelLeftOpen, Bookmark, Highlighter, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { StructureItem } from "./structure-item"
 import type { StructureNode } from "./use-structure"
+import type { Bookmark as BookmarkType } from "@/lib/bookmarks"
+import type { Highlight } from "@/lib/highlights"
 
 interface StructurePanelProps {
   nodes: StructureNode[]
@@ -11,9 +13,13 @@ interface StructurePanelProps {
   error: string | null
   fullText: string | null
   collapsed: boolean
+  bookmarks: BookmarkType[]
+  highlights: Highlight[]
   onToggle: () => void
   onAnalyze: (text: string) => void
   onNavigate: (page: number) => void
+  onRemoveBookmark: (id: string) => void
+  onRemoveHighlight: (id: string) => void
 }
 
 export function StructurePanel({
@@ -22,9 +28,13 @@ export function StructurePanel({
   error,
   fullText,
   collapsed,
+  bookmarks,
+  highlights,
   onToggle,
   onAnalyze,
   onNavigate,
+  onRemoveBookmark,
+  onRemoveHighlight,
 }: StructurePanelProps) {
   if (collapsed) {
     return (
@@ -109,6 +119,111 @@ export function StructurePanel({
             )}
           </div>
         )}
+
+        <BookmarksSection
+          bookmarks={bookmarks}
+          onNavigate={onNavigate}
+          onRemove={onRemoveBookmark}
+        />
+
+        <HighlightsSection
+          highlights={highlights}
+          onRemove={onRemoveHighlight}
+        />
+      </div>
+    </div>
+  )
+}
+
+function BookmarksSection({
+  bookmarks,
+  onNavigate,
+  onRemove,
+}: {
+  bookmarks: BookmarkType[]
+  onNavigate: (page: number) => void
+  onRemove: (id: string) => void
+}) {
+  if (bookmarks.length === 0) return null
+
+  return (
+    <div className="mt-4 border-t pt-3">
+      <div className="flex items-center gap-1.5 px-2 pb-2">
+        <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="text-xs font-semibold text-muted-foreground">
+          Bookmarks ({bookmarks.length})
+        </span>
+      </div>
+      <div className="space-y-0.5">
+        {bookmarks.map((b) => (
+          <div
+            key={b.id}
+            className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+          >
+            <button
+              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+              onClick={() => {
+                if (b.page) onNavigate(b.page)
+              }}
+            >
+              <span className="truncate">
+                {b.label ?? (b.page ? `Page ${b.page}` : `${Math.round((b.scrollRatio ?? 0) * 100)}%`)}
+              </span>
+            </button>
+            <button
+              onClick={() => onRemove(b.id)}
+              className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+            >
+              <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function HighlightsSection({
+  highlights,
+  onRemove,
+}: {
+  highlights: Highlight[]
+  onRemove: (id: string) => void
+}) {
+  if (highlights.length === 0) return null
+
+  return (
+    <div className="mt-4 border-t pt-3">
+      <div className="flex items-center gap-1.5 px-2 pb-2">
+        <Highlighter className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-500" />
+        <span className="text-xs font-semibold text-muted-foreground">
+          Highlights ({highlights.length})
+        </span>
+      </div>
+      <div className="space-y-0.5">
+        {highlights.map((h) => (
+          <div
+            key={h.id}
+            className="group rounded-md px-2 py-1.5 hover:bg-accent"
+          >
+            <div className="flex items-start gap-2">
+              <p className="min-w-0 flex-1 text-xs leading-relaxed line-clamp-3 select-text border-l-2 border-yellow-500/50 pl-2">
+                {h.text}
+              </p>
+              <button
+                onClick={() => onRemove(h.id)}
+                className="mt-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+              >
+                <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+              </button>
+            </div>
+            {h.note && (
+              <p className="mt-1 pl-4 text-[10px] text-muted-foreground italic">
+                {h.note}
+              </p>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   )
