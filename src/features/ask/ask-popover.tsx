@@ -48,6 +48,10 @@ export function AskPopover({
     refs.setPositionReference(virtualRef)
   }, [virtualRef, refs])
 
+  const formatted = explanation
+    .replace(/(\d+)\.\s+\*\*/g, "\n$1. **")
+    .replace(/^\n/, "")
+
   if (!isOpen || !rect) return null
 
   return (
@@ -72,7 +76,7 @@ export function AskPopover({
         <div className="max-h-96 overflow-y-auto text-sm leading-relaxed">
           {explanation ? (
             <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
-              <ReactMarkdown>{explanation}</ReactMarkdown>
+              <ReactMarkdown>{formatted}</ReactMarkdown>
             </div>
           ) : (
             <span className="flex items-center gap-2 text-muted-foreground">
