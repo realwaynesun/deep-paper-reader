@@ -8,7 +8,7 @@ import {
   shift,
   autoUpdate,
 } from "@floating-ui/react"
-import { Languages, MessageCircleQuestion } from "lucide-react"
+import { Languages, MessageCircleQuestion, Highlighter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface SelectionToolbarProps {
@@ -16,6 +16,7 @@ interface SelectionToolbarProps {
   action: "ask" | "translate" | null
   onAsk: () => void
   onTranslate: () => void
+  onHighlight: () => void
   onMouseDown: () => void
 }
 
@@ -24,6 +25,7 @@ export function SelectionToolbar({
   action,
   onAsk,
   onTranslate,
+  onHighlight,
   onMouseDown,
 }: SelectionToolbarProps) {
   const virtualRef = useMemo(() => {
@@ -76,6 +78,15 @@ export function SelectionToolbar({
             Translate
           </Button>
         )}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 gap-1.5 px-3 text-xs text-yellow-600 dark:text-yellow-500"
+          onClick={onHighlight}
+        >
+          <Highlighter className="h-3.5 w-3.5" />
+          Highlight
+        </Button>
       </div>
     </div>
   )

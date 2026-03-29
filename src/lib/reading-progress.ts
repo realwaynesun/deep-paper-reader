@@ -5,6 +5,7 @@ export interface ReadingProgress {
   page?: number
   scrollRatio?: number
   zoom?: number
+  totalReadingTime?: number
   lastReadAt: string
 }
 
@@ -33,4 +34,13 @@ export function getAllProgress(): ReadingProgress[] {
     } catch { /* skip */ }
   }
   return results.sort((a, b) => b.lastReadAt.localeCompare(a.lastReadAt))
+}
+
+export function formatReadingTime(seconds: number): string {
+  if (seconds < 60) return "<1 min"
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  const remaining = minutes % 60
+  return remaining > 0 ? `${hours}h ${remaining}min` : `${hours}h`
 }

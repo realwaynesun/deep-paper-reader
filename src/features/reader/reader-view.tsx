@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, ExternalLink } from "lucide-react"
+import { ArrowLeft, ExternalLink, Bookmark, BookmarkCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsButton } from "@/features/settings/settings-dialog"
 import { PdfViewer } from "@/features/pdf-viewer/pdf-viewer"
@@ -16,6 +16,8 @@ import { useAsk } from "@/features/ask/use-ask"
 import { StructurePanel } from "@/features/structure/structure-panel"
 import { useStructure } from "@/features/structure/use-structure"
 import { getProgress, setProgress } from "@/lib/reading-progress"
+import { getBookmarks, addBookmark, removeBookmark, type Bookmark as BookmarkData } from "@/lib/bookmarks"
+import { getHighlights, addHighlight, removeHighlight, type Highlight } from "@/lib/highlights"
 import type { DocumentSource } from "@/app/page"
 
 interface ReaderViewProps {
@@ -29,7 +31,11 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
   const [translateOpen, setTranslateOpen] = useState(false)
   const [askRect, setAskRect] = useState<DOMRect | null>(null)
   const [structureCollapsed, setStructureCollapsed] = useState(false)
+  const [bookmarks, setBookmarks] = useState<BookmarkData[]>([])
+  const [highlights, setHighlights] = useState<Highlight[]>([])
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const currentPageRef = useRef(1)
+  const currentScrollRef = useRef(0)
 
   const isPdf =
     doc.type === "pdf" ||
@@ -61,6 +67,31 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
     if (documentId) setProgress(documentId, {})
   }, [documentId])
 
+  // Load bookmarks and highlights
+  useEffect(() => {
+    if (!documentId) return
+    setBookmarks(getBookmarks(documentId))
+    setHighlights(getHighlights(documentId))
+  }, [documentId])
+
+  // Reading time tracker (30s interval, pauses when tab hidden)
+  useEffect(() => {
+    if (!documentId) return
+    let active = !document.hidden
+    const interval = setInterval(() => {
+      if (!active) return
+      const progress = getProgress(documentId)
+      const current = progress?.totalReadingTime ?? 0
+      setProgress(documentId, { totalReadingTime: current + 30 })
+    }, 30_000)
+    const handleVisibility = () => { active = !document.hidden }
+    document.addEventListener("visibilitychange", handleVisibility)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", handleVisibility)
+    }
+  }, [documentId])
+
   const throttledSave = useCallback((data: Record<string, unknown>) => {
     if (!documentId) return
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
@@ -68,10 +99,12 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
   }, [documentId])
 
   const handlePageChange = useCallback((page: number, totalPages: number) => {
+    currentPageRef.current = page
     throttledSave({ page, totalPages })
   }, [throttledSave])
 
   const handleScrollChange = useCallback((ratio: number) => {
+    currentScrollRef.current = ratio
     throttledSave({ scrollRatio: ratio })
   }, [throttledSave])
 
@@ -91,6 +124,45 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
     ask.ask(selection.text, selection.context, title)
     selection.clear()
   }, [selection, ask, title])
+
+  const handleHighlight = useCallback(() => {
+    if (!documentId || !selection.text) return
+    addHighlight(documentId, selection.text)
+    setHighlights(getHighlights(documentId))
+    selection.clear()
+  }, [documentId, selection])
+
+  const isCurrentPageBookmarked = bookmarks.some((b) =>
+    isPdf ? b.page === currentPageRef.current : false
+  )
+
+  const handleToggleBookmark = useCallback(() => {
+    if (!documentId) return
+    const existing = bookmarks.find((b) =>
+      isPdf ? b.page === currentPageRef.current : false
+    )
+    if (existing) {
+      removeBookmark(documentId, existing.id)
+    } else {
+      const data = isPdf
+        ? { page: currentPageRef.current }
+        : { scrollRatio: currentScrollRef.current }
+      addBookmark(documentId, data)
+    }
+    setBookmarks(getBookmarks(documentId))
+  }, [documentId, bookmarks, isPdf])
+
+  const handleRemoveBookmark = useCallback((id: string) => {
+    if (!documentId) return
+    removeBookmark(documentId, id)
+    setBookmarks(getBookmarks(documentId))
+  }, [documentId])
+
+  const handleRemoveHighlight = useCallback((id: string) => {
+    if (!documentId) return
+    removeHighlight(documentId, id)
+    setHighlights(getHighlights(documentId))
+  }, [documentId])
 
   const handleNavigate = useCallback((page: number) => {
     if (!Number.isFinite(page) || page < 1) return
@@ -131,6 +203,21 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
         </Button>
         <h1 className="truncate text-sm font-medium">{title}</h1>
         <div className="ml-auto flex items-center gap-1">
+          {documentId && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleToggleBookmark}
+              title={isCurrentPageBookmarked ? "Remove bookmark" : "Bookmark this page"}
+            >
+              {isCurrentPageBookmarked ? (
+                <BookmarkCheck className="h-4 w-4 text-primary" />
+              ) : (
+                <Bookmark className="h-4 w-4" />
+              )}
+            </Button>
+          )}
           {doc.type === "pdf" && doc.pdfUrl && (
             <Button
               variant="ghost"
@@ -157,9 +244,13 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
             error={structure.error}
             fullText={fullText}
             collapsed={structureCollapsed}
+            bookmarks={bookmarks}
+            highlights={highlights}
             onToggle={() => setStructureCollapsed((v) => !v)}
             onAnalyze={structure.analyze}
             onNavigate={handleNavigate}
+            onRemoveBookmark={handleRemoveBookmark}
+            onRemoveHighlight={handleRemoveHighlight}
           />
         </div>
 
@@ -171,6 +262,7 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
             action={selection.action}
             onAsk={handleAsk}
             onTranslate={handleTranslate}
+            onHighlight={handleHighlight}
             onMouseDown={selection.preventDismiss}
           />
 
