@@ -25,17 +25,10 @@ interface ReaderViewProps {
 
 export function ReaderView({ doc, onBack }: ReaderViewProps) {
   const router = useRouter()
-  const [fullText, setFullText] = useState<string | null>(null)
-  const [translateOpen, setTranslateOpen] = useState(false)
-  const [askRect, setAskRect] = useState<DOMRect | null>(null)
-  const [structureCollapsed, setStructureCollapsed] = useState(false)
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   const isPdf =
     doc.type === "pdf" ||
     (doc.type === "file" && !doc.file.name.endsWith(".md"))
-
-  const [pdfUrl, setPdfUrl] = useState(doc.type === "pdf" ? doc.pdfUrl : "")
 
   const title =
     doc.type === "file" ? doc.file.name :
@@ -48,6 +41,14 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
     undefined
 
   const savedProgress = documentId ? getProgress(documentId) : null
+
+  const [fullText, setFullText] = useState<string | null>(null)
+  const [translateOpen, setTranslateOpen] = useState(false)
+  const [askRect, setAskRect] = useState<DOMRect | null>(null)
+  const [pdfUrl, setPdfUrl] = useState(doc.type === "pdf" ? doc.pdfUrl : "")
+  const [structureCollapsed, setStructureCollapsed] = useState(savedProgress?.structureCollapsed ?? false)
+  const [readProgress, setReadProgress] = useState(0)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   useEffect(() => {
     if (doc.type !== "file" || doc.file.name.endsWith(".md")) return
@@ -69,10 +70,24 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
 
   const handlePageChange = useCallback((page: number, totalPages: number) => {
     throttledSave({ page, totalPages })
+    setReadProgress(totalPages > 0 ? page / totalPages : 0)
   }, [throttledSave])
 
   const handleScrollChange = useCallback((ratio: number) => {
     throttledSave({ scrollRatio: ratio })
+    setReadProgress(ratio)
+  }, [throttledSave])
+
+  const handleZoomChange = useCallback((zoom: number) => {
+    throttledSave({ zoom })
+  }, [throttledSave])
+
+  const handleStructureToggle = useCallback(() => {
+    setStructureCollapsed((v) => {
+      const next = !v
+      throttledSave({ structureCollapsed: next })
+      return next
+    })
   }, [throttledSave])
 
   const selection = useTextSelection()
@@ -105,7 +120,9 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
           url={pdfUrl}
           onTextExtracted={setFullText}
           initialPage={savedProgress?.page}
+          initialZoom={savedProgress?.zoom}
           onPageChange={handlePageChange}
+          onZoomChange={handleZoomChange}
         />
       )
     }
@@ -157,13 +174,17 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
             error={structure.error}
             fullText={fullText}
             collapsed={structureCollapsed}
-            onToggle={() => setStructureCollapsed((v) => !v)}
+            onToggle={handleStructureToggle}
             onAnalyze={structure.analyze}
             onNavigate={handleNavigate}
           />
         </div>
 
         <div className="relative flex-1 overflow-hidden">
+          <div
+            className="absolute left-0 top-0 z-10 h-[2px] bg-primary transition-[width] duration-300"
+            style={{ width: `${readProgress * 100}%` }}
+          />
           {renderViewer()}
 
           <SelectionToolbar
