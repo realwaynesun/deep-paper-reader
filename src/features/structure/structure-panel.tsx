@@ -249,7 +249,7 @@ function VocabItem({ entry, onRemove }: { entry: VocabEntry; onRemove: (id: stri
         </button>
       </div>
       {expanded && (
-        <div className="prose prose-xs prose-neutral dark:prose-invert mt-1 max-w-none select-text border-l-2 border-blue-500/50 pl-2">
+        <div className="prose prose-xs prose-neutral dark:prose-invert mt-1 max-w-none select-text border-l-2 border-blue-500/50 pl-2 text-xs [&_ol]:text-xs [&_li]:text-xs [&_p]:text-xs [&_strong]:text-xs">
           <ReactMarkdown>{formatExplanation(entry.explanation)}</ReactMarkdown>
         </div>
       )}
