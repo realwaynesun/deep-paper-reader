@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import ReactMarkdown from "react-markdown"
 import { BookOpen, Loader2, PanelLeftClose, PanelLeftOpen, Bookmark, Highlighter, BookA, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { StructureItem } from "./structure-item"
@@ -230,6 +231,10 @@ function VocabContent({ vocabulary, onRemove }: { vocabulary: VocabEntry[]; onRe
   )
 }
 
+function formatExplanation(text: string) {
+  return text.replace(/(\d+)\.\s+\*\*/g, "\n$1. **").replace(/^\n/, "")
+}
+
 function VocabItem({ entry, onRemove }: { entry: VocabEntry; onRemove: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -244,9 +249,9 @@ function VocabItem({ entry, onRemove }: { entry: VocabEntry; onRemove: (id: stri
         </button>
       </div>
       {expanded && (
-        <p className="mt-1 select-text border-l-2 border-blue-500/50 pl-2 text-xs text-muted-foreground">
-          {entry.explanation}
-        </p>
+        <div className="prose prose-xs prose-neutral dark:prose-invert mt-1 max-w-none select-text border-l-2 border-blue-500/50 pl-2">
+          <ReactMarkdown>{formatExplanation(entry.explanation)}</ReactMarkdown>
+        </div>
       )}
     </div>
   )
