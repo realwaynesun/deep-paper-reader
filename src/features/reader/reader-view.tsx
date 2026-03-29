@@ -15,6 +15,8 @@ import { AskPopover } from "@/features/ask/ask-popover"
 import { useAsk } from "@/features/ask/use-ask"
 import { StructurePanel } from "@/features/structure/structure-panel"
 import { useStructure } from "@/features/structure/use-structure"
+import { SearchBar } from "@/features/search/search-bar"
+import { useDocumentSearch } from "@/features/search/use-document-search"
 import { getProgress, setProgress } from "@/lib/reading-progress"
 import type { DocumentSource } from "@/app/page"
 
@@ -79,6 +81,7 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
   const translate = useTranslate()
   const ask = useAsk()
   const structure = useStructure(documentId)
+  const search = useDocumentSearch()
 
   const handleTranslate = useCallback(() => {
     setTranslateOpen(true)
@@ -164,6 +167,17 @@ export function ReaderView({ doc, onBack }: ReaderViewProps) {
         </div>
 
         <div className="relative flex-1 overflow-hidden">
+          <SearchBar
+            isOpen={search.isOpen}
+            query={search.query}
+            matchCount={search.matchCount}
+            currentMatch={search.currentMatch}
+            inputRef={search.inputRef}
+            onQueryChange={search.setQuery}
+            onNext={search.next}
+            onPrev={search.prev}
+            onClose={search.close}
+          />
           {renderViewer()}
 
           <SelectionToolbar
