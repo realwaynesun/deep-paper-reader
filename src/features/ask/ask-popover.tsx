@@ -54,11 +54,11 @@ export function AskPopover({
     <div
       ref={refs.setFloating}
       style={floatingStyles}
-      className="z-50 w-80 animate-in fade-in slide-in-from-top-1 duration-200"
+      className="z-50 w-[28rem] animate-in fade-in slide-in-from-top-1 duration-200"
     >
-      <div className="rounded-lg border bg-popover p-4 shadow-xl">
+      <div className="rounded-xl border bg-popover p-5 shadow-xl">
         <div className="mb-3 flex items-start justify-between">
-          <h4 className="font-semibold">&ldquo;{word}&rdquo;</h4>
+          <h4 className="text-base font-semibold">&ldquo;{word}&rdquo;</h4>
           <Button
             variant="ghost"
             size="icon"
@@ -69,7 +69,7 @@ export function AskPopover({
           </Button>
         </div>
 
-        <div className="max-h-64 overflow-y-auto text-sm leading-relaxed">
+        <div className="max-h-96 overflow-y-auto text-sm leading-relaxed">
           {explanation ? (
             <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
               <ReactMarkdown>{explanation}</ReactMarkdown>
