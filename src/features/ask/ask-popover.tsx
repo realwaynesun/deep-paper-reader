@@ -44,7 +44,7 @@ export function AskPopover({
   const { refs, floatingStyles } = useFloating({
     open: isOpen,
     placement: "bottom-start",
-    middleware: [offset(12), flip(), shift({ padding: 16 })],
+    middleware: [offset(12), flip({ padding: 60 }), shift({ padding: 16 })],
     whileElementsMounted: autoUpdate,
   })
 
@@ -117,6 +117,7 @@ export function AskPopover({
       }}
       style={{
         ...floatingStyles,
+        top: Math.max(8, floatingStyles.top as number ?? 0),
         transform: `${floatingStyles.transform ?? ""} translate(${dragOffset.x}px, ${dragOffset.y}px)`,
       }}
       className="z-50 w-[28rem] max-w-[90vw] animate-in fade-in slide-in-from-top-1 duration-200"
