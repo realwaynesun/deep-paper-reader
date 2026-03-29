@@ -10,6 +10,7 @@ import {
 } from "@floating-ui/react"
 import { Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import ReactMarkdown from "react-markdown"
 
 interface AskPopoverProps {
   rect: DOMRect | null
@@ -68,8 +69,12 @@ export function AskPopover({
           </Button>
         </div>
 
-        <div className="max-h-64 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap">
-          {explanation || (
+        <div className="max-h-64 overflow-y-auto text-sm leading-relaxed">
+          {explanation ? (
+            <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
+              <ReactMarkdown>{explanation}</ReactMarkdown>
+            </div>
+          ) : (
             <span className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Thinking...
