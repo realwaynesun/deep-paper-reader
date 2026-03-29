@@ -9,6 +9,7 @@ export interface ReadingProgress {
   page?: number
   scrollRatio?: number
   zoom?: number
+  structureCollapsed?: boolean
   lastReadAt: string
 }
 

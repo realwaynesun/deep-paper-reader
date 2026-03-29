@@ -16,23 +16,33 @@ interface PdfViewerProps {
   url: string
   onTextExtracted?: (text: string) => void
   initialPage?: number
+  initialZoom?: number
   onPageChange?: (page: number, totalPages: number) => void
+  onZoomChange?: (zoom: number) => void
 }
 
-export function PdfViewer({ url, onTextExtracted, initialPage, onPageChange }: PdfViewerProps) {
+export function PdfViewer({ url, onTextExtracted, initialPage, initialZoom, onPageChange, onZoomChange }: PdfViewerProps) {
   const [numPages, setNumPages] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
-  const [scale, setScale] = useState(1.2)
+  const [scale, setScale] = useState(initialZoom ?? 1.2)
   const containerRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
 
   const zoomIn = useCallback(() => {
-    setScale((s) => Math.min(3, s + 0.2))
-  }, [])
+    setScale((s) => {
+      const next = Math.min(3, s + 0.2)
+      onZoomChange?.(next)
+      return next
+    })
+  }, [onZoomChange])
 
   const zoomOut = useCallback(() => {
-    setScale((s) => Math.max(0.5, s - 0.2))
-  }, [])
+    setScale((s) => {
+      const next = Math.max(0.5, s - 0.2)
+      onZoomChange?.(next)
+      return next
+    })
+  }, [onZoomChange])
 
   const goToPage = useCallback(
     (page: number) => {
